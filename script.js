@@ -46,9 +46,6 @@ connectBtn.addEventListener('click', () => {
         receiverBox.appendChild(msg);
     });
 
-
-
-
     client.on('close', () => {
         console.log('Disconnected');
         alert('Disconnected from broker!');

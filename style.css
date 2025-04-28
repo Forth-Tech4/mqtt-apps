@@ -114,16 +114,17 @@
     background-color: #0056b3;
   }
   
-  .receiver-box {
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 5px;
-    height: 200px;
-    overflow-y: auto;
-    color: #333;
-    font-size: 14px;
+    .receiver-box {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 5px;
+      height: 200px;
+      overflow-y: auto;
+      color: #333;
+      font-size: 14px;
   }
+  
 
   .receiver-box p {
     animation: fadeIn 0.5s ease;
@@ -140,7 +141,7 @@
 
   
 
-  /* Responsive Design */
+
   @media (max-width: 600px) {
     .form-row {
       flex-direction: column;
