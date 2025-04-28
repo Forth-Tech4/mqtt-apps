@@ -13,13 +13,12 @@ connectBtn.addEventListener('click', () => {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
-    // Use ws:// for non-secure WebSocket connections or change to wss:// with correct port.
-    const url = host ? `ws://${host}:${port}/mqtt` : `wss://broker.hivemq.com:8884/mqtt`;
+    const url = host ? `wss://${host}:${port}/mqtt` : `wss://broker.hivemq.com:8884/mqtt`;
 
-    console.log(`Attempting to connect to: ${url}`); // For debugging
+    console.log(`Attempting to connect to: ${url}`); 
 
     client = mqtt.connect(url, {
-        clientId: clientId || `client-${Math.floor(Math.random() * 1000)}`, // Generate a random clientId if not provided
+        clientId: clientId || `client-${Math.floor(Math.random() * 1000)}`, 
         username: username || undefined,
         password: password || undefined,
         keepalive: 60,
