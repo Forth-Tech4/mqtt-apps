@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MQTT UI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="card">
+            <h2>Connection</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="host">Host</label>
+                    <input type="text" id="host" placeholder="Host">
+                </div>
+                <div class="form-group">
+                    <label for="port">Port</label>
+                    <input type="text" id="port" placeholder="Port">
+                </div>
+                <div class="form-group">
+                    <label for="clientId">Client ID</label>
+                    <input type="text" id="clientId" placeholder="Client ID">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Password">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="connect-btn">Connect</button>
+                <button class="disconnect-btn">Disconnect</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Publisher</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="topic">Topic</label>
+                    <input type="text" id="topic" placeholder="Topic">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="payload">Payload</label>
+                    <textarea id="payload" placeholder="Payload"></textarea>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="publish-btn">Publish</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Subscriber</h2>
+            <div class="form-group">
+                <label for="Subscriber">Topic</label>
+                <input type="text" id="Subscriber" placeholder="Topic">
+            </div>
+            <div class="button-group">
+                <button class="subscribe-btn">Subscribe</button>
+            </div>
+        </div>
+
+
+        <div class="card">
+            <h2>Receiver</h2>
+            <div class="receiver-box" id="receiverBox">
+            </div>
+        </div>
+        
+
+    </div>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="script.js"></script>
+
+</body>
+
+</html>
