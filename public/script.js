@@ -32,7 +32,7 @@ connectBtn.addEventListener('click', () => {
 
         ws.onmessage = (event) => {
             const { topic, message, error } = JSON.parse(event.data);
-
+        
             if (error) {
                 console.log('Error:', error);
                 alert(error);
@@ -41,11 +41,25 @@ connectBtn.addEventListener('click', () => {
                 connectBtn.removeAttribute('disabled');
             } else {
                 const msg = document.createElement('p');
-                msg.textContent = `Topic: ${topic} | Message: ${message}`;
+        
+                let displayMessage = message;
+        
+                try {
+                    const parsed = JSON.parse(message);
+                    // If it's a valid JSON object, get only the values
+                    if (typeof parsed === 'object' && parsed !== null) {
+                        displayMessage = Object.values(parsed).join(', ');
+                    }
+                } catch (e) {
+                    // Not a JSON string, leave it as-is
+                }
+        
+                msg.textContent = `Topic: ${topic} | Message: ${displayMessage}`;
                 receiverBox.appendChild(msg);
                 receiverBox.scrollTop = receiverBox.scrollHeight;
             }
         };
+        
 
         ws.onclose = () => {
             console.log('WebSocket disconnected');
