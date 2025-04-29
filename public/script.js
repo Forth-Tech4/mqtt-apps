@@ -7,10 +7,9 @@ const subscribeBtn = document.querySelector('.subscribe-btn');
 const receiverBox = document.getElementById('receiverBox');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password'); 
-
 connectBtn.addEventListener('click', () => {
     const enteredUsername = usernameInput.value;
-    const enteredPassword = passwordInput.value; 
+    const enteredPassword = passwordInput.value;
 
     if (enteredUsername === 'kanji' && enteredPassword === '123') {
         ws = new WebSocket('ws://localhost:3001');
@@ -21,10 +20,13 @@ connectBtn.addEventListener('click', () => {
             disconnectBtn.removeAttribute('disabled');
             connectBtn.setAttribute('disabled', true);
 
-            const authToken = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImthbmppIiwiaWF0IjoxNzQ1OTIyNDQ3LCJleHAiOjE3NDU5MjYwNDd9.gbqgpNFCi0Q1649zH7I_qXNcbVL3HZRFLCcYl0h4Dj0ogpDftijRRu58Tfi-TVN5ZBYVOSZkB9HgCivi_SP956U-KG8Xpy2hYUqj9LBWxZVuLqk1mm178-r8-eLGfLnPGFRD3ZzgTok4QoYuewiJTLD-dnW0DHMP0NuML2TIT54vt54OV5xkOZOvxqYimTHOwvR5bYr_ZpRQEsFUhs2pznhZQPdYRc1ildWFYGzSjfiD3A1KEiPty16_q0WCkKK6ReV8yCyDK14hhrZ9GqyRziiKkMcnxEd2W9UGCH5HzyZUeMHdoZHefPxiP7R75_T3bO9_9gXExEcLS4syBR2ORw'; 
+            console.log('Sending auth:', enteredUsername, enteredPassword);
+
+            // Send username and password to server
             ws.send(JSON.stringify({
                 action: 'auth',
-                token: authToken
+                username: enteredUsername,
+                password: enteredPassword
             }));
 
             receiverBox.innerHTML = '';
@@ -32,6 +34,7 @@ connectBtn.addEventListener('click', () => {
 
         ws.onmessage = (event) => {
             const { topic, message, error } = JSON.parse(event.data);
+            console.log('Received from server:', event.data);
         
             if (error) {
                 console.log('Error:', error);
@@ -40,20 +43,20 @@ connectBtn.addEventListener('click', () => {
                 disconnectBtn.setAttribute('disabled', true);
                 connectBtn.removeAttribute('disabled');
             } else {
-                const msg = document.createElement('p');
-        
                 let displayMessage = message;
         
+                // If the message is a JSON string, parse it and extract the value
                 try {
                     const parsed = JSON.parse(message);
-                    // If it's a valid JSON object, get only the values
                     if (typeof parsed === 'object' && parsed !== null) {
-                        displayMessage = Object.values(parsed).join(', ');
+                        // Show only the first value in the object
+                        displayMessage = Object.values(parsed)[0];
                     }
                 } catch (e) {
-                    // Not a JSON string, leave it as-is
+                    // message is not JSON, use as-is
                 }
         
+                const msg = document.createElement('p');
                 msg.textContent = `Topic: ${topic} | Message: ${displayMessage}`;
                 receiverBox.appendChild(msg);
                 receiverBox.scrollTop = receiverBox.scrollHeight;
