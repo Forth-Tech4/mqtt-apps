@@ -5,34 +5,67 @@ const disconnectBtn = document.querySelector('.disconnect-btn');
 const publishBtn = document.querySelector('.publish-btn');
 const subscribeBtn = document.querySelector('.subscribe-btn');
 const receiverBox = document.getElementById('receiverBox');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password'); 
 
 connectBtn.addEventListener('click', () => {
-    ws = new WebSocket('ws://localhost:3000');
+    const enteredUsername = usernameInput.value;
+    const enteredPassword = passwordInput.value; 
 
-    ws.onopen = () => {
-        console.log('Connected to Node.js WebSocket Server');
-        alert('Connected!');
-        receiverBox.innerHTML = '';
-    };
+    if (enteredUsername === 'kanji' && enteredPassword === '123') {
+        ws = new WebSocket('ws://localhost:3001');
 
-    ws.onmessage = (event) => {
-        const { topic, message } = JSON.parse(event.data);
-        const msg = document.createElement('p');
-        msg.textContent = `Topic: ${topic} | Message: ${message}`;
-        receiverBox.appendChild(msg);
-        receiverBox.scrollTop = receiverBox.scrollHeight;
-    };
+        ws.onopen = () => {
+            console.log('Connected to Node.js WebSocket Server');
+            alert('Connected!');
+            disconnectBtn.removeAttribute('disabled');
+            connectBtn.setAttribute('disabled', true);
 
-    ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        alert('Disconnected!');
-        receiverBox.innerHTML = '';
-    };
+            const authToken = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImthbmppIiwiaWF0IjoxNzQ1OTIyNDQ3LCJleHAiOjE3NDU5MjYwNDd9.gbqgpNFCi0Q1649zH7I_qXNcbVL3HZRFLCcYl0h4Dj0ogpDftijRRu58Tfi-TVN5ZBYVOSZkB9HgCivi_SP956U-KG8Xpy2hYUqj9LBWxZVuLqk1mm178-r8-eLGfLnPGFRD3ZzgTok4QoYuewiJTLD-dnW0DHMP0NuML2TIT54vt54OV5xkOZOvxqYimTHOwvR5bYr_ZpRQEsFUhs2pznhZQPdYRc1ildWFYGzSjfiD3A1KEiPty16_q0WCkKK6ReV8yCyDK14hhrZ9GqyRziiKkMcnxEd2W9UGCH5HzyZUeMHdoZHefPxiP7R75_T3bO9_9gXExEcLS4syBR2ORw'; 
+            ws.send(JSON.stringify({
+                action: 'auth',
+                token: authToken
+            }));
+
+            receiverBox.innerHTML = '';
+        };
+
+        ws.onmessage = (event) => {
+            const { topic, message, error } = JSON.parse(event.data);
+
+            if (error) {
+                console.log('Error:', error);
+                alert(error);
+                ws.close();
+                disconnectBtn.setAttribute('disabled', true);
+                connectBtn.removeAttribute('disabled');
+            } else {
+                const msg = document.createElement('p');
+                msg.textContent = `Topic: ${topic} | Message: ${message}`;
+                receiverBox.appendChild(msg);
+                receiverBox.scrollTop = receiverBox.scrollHeight;
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket disconnected');
+            alert('Disconnected!');
+            receiverBox.innerHTML = '';
+            disconnectBtn.setAttribute('disabled', true);
+            connectBtn.removeAttribute('disabled');
+        };
+    } else if (enteredUsername || enteredPassword) {
+        alert('Incorrect username or password. Connection not initiated.');
+    } else {
+        alert('Please enter a username and password.');
+    }
 });
 
 disconnectBtn.addEventListener('click', () => {
     if (ws) {
         ws.close();
+        disconnectBtn.setAttribute('disabled', true);
+        connectBtn.removeAttribute('disabled');
     }
 });
 
