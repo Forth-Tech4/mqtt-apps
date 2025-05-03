@@ -9,87 +9,107 @@ const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 
 connectBtn.addEventListener('click', () => {
-  const enteredUsername = usernameInput.value;
-  const enteredPassword = passwordInput.value;
+    const enteredUsername = usernameInput.value;
+    const enteredPassword = passwordInput.value;
 
-  if (enteredUsername === 'kanji' && enteredPassword === '123') {
+    if (!enteredUsername || !enteredPassword) {
+        alert('Please enter a username and password.');
+        return;
+    }
+
     ws = new WebSocket('ws://localhost:3001');
 
     ws.onopen = () => {
-      console.log('Connected to Node.js WebSocket Server');
-      alert('Connected!');
-      disconnectBtn.removeAttribute('disabled');
-      connectBtn.setAttribute('disabled', true);
-      receiverBox.innerHTML = '';
+        console.log('Connected to Node.js WebSocket Server');
+        alert('Connected! Attempting authentication...');
+        disconnectBtn.removeAttribute('disabled');
+        connectBtn.setAttribute('disabled', true);
+        receiverBox.innerHTML = '';
+
+        // Send username and password for MQTT authentication to the server
+        ws.send(JSON.stringify({
+            action: 'auth', // Use the 'auth' action as defined in the server.js
+            username: enteredUsername,
+            password: enteredPassword
+        }));
     };
 
     ws.onmessage = (event) => {
-      const { topic, message, error } = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
+        console.log('Received from server:', data);
 
-      if (error) {
-        console.log('Error:', error);
-        alert(error);
-        ws.close();
-        disconnectBtn.setAttribute('disabled', true);
-        connectBtn.removeAttribute('disabled');
-      } else {
-        const msg = document.createElement('p');
+        if (data.error) {
+            console.error('Error:', data.error);
+            alert(data.error);
+            ws.close();
+            disconnectBtn.setAttribute('disabled', true);
+            connectBtn.removeAttribute('disabled');
+        } else if (data.status === 'authenticated') {
+            alert('Successfully authenticated with MQTT broker.');
+            // Enable publish and subscribe buttons after successful authentication
+        } else if (data.topic || data.message) {
+            const { topic, message } = data;
+            let displayMessage = message;
 
-        let displayMessage = message;
-        try {
-          const parsed = JSON.parse(message);
-          if (typeof parsed === 'object' && parsed !== null) {
-            displayMessage = Object.values(parsed).join(', ');
-          }
-        } catch (e) {}
+            try {
+                const parsed = JSON.parse(message);
+                if (typeof parsed === 'object' && parsed !== null) {
+                    displayMessage = Object.values(parsed).join(', ');
+                }
+            } catch (e) {
+                // message is not JSON, use as-is
+            }
 
-        msg.textContent = `Topic: ${topic} | Message: ${displayMessage}`;
-        receiverBox.appendChild(msg);
-        receiverBox.scrollTop = receiverBox.scrollHeight;
-      }
+            const msg = document.createElement('p');
+            msg.textContent = `Topic: ${topic} | Message: ${displayMessage}`;
+            receiverBox.appendChild(msg);
+            receiverBox.scrollTop = receiverBox.scrollHeight;
+        }
     };
 
     ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      alert('Disconnected!');
-      receiverBox.innerHTML = '';
-      disconnectBtn.setAttribute('disabled', true);
-      connectBtn.removeAttribute('disabled');
+        console.log('WebSocket disconnected');
+        alert('Disconnected!');
+        receiverBox.innerHTML = '';
+        disconnectBtn.setAttribute('disabled', true);
+        connectBtn.removeAttribute('disabled');
     };
-  } else if (enteredUsername || enteredPassword) {
-    alert('Incorrect username or password. Connection not initiated.');
-  } else {
-    alert('Please enter a username and password.');
-  }
+
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        alert('WebSocket connection error.');
+        disconnectBtn.setAttribute('disabled', true);
+        connectBtn.removeAttribute('disabled');
+    };
 });
 
 disconnectBtn.addEventListener('click', () => {
-  if (ws) {
-    ws.close();
-    disconnectBtn.setAttribute('disabled', true);
-    connectBtn.removeAttribute('disabled');
-  }
+    if (ws) {
+        ws.close();
+        disconnectBtn.setAttribute('disabled', true);
+        connectBtn.removeAttribute('disabled');
+    }
 });
 
 publishBtn.addEventListener('click', () => {
-  const topic = document.getElementById('topic').value;
-  const payload = document.getElementById('payload').value;
+    const topic = document.getElementById('topic').value;
+    const payload = document.getElementById('payload').value;
 
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ action: 'publish', topic: topic, message: payload }));
-    alert('Message Published!');
-  } else {
-    alert('Please connect first.');
-  }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'publish', topic: topic, message: payload }));
+        alert('Message Published!');
+    } else {
+        alert('Please connect first.');
+    }
 });
 
 subscribeBtn.addEventListener('click', () => {
-  const subTopic = document.getElementById('Subscriber').value;
+    const subTopic = document.getElementById('Subscriber').value;
 
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ action: 'subscribe', topic: subTopic }));
-    alert(`Subscribed to ${subTopic}`);
-  } else {
-    alert('Please connect first.');
-  }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'subscribe', topic: subTopic }));
+        alert(`Subscribed to ${subTopic}`);
+    } else {
+        alert('Please connect first.');
+    }
 });
