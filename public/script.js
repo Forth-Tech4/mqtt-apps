@@ -8,14 +8,27 @@ const receiverBox = document.getElementById('receiverBox');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 
+var current_buzzer_sate = false;
+var current_laser_sate = false;
+var current_light_sate = false;
+
+// for the controls
+const moveYInput = document.getElementById('move-y')
+const moveXInput = document.getElementById('move-x')
+const laser = document.querySelector('.leaser');
+const light = document.querySelector('.light');
+const buzzer = document.querySelector('.buzzer');
+const moveXButton = document.querySelector('.move-x-button');
+const moveYButton = document.querySelector('.move-y-button');
+
 connectBtn.addEventListener('click', () => {
     const enteredUsername = usernameInput.value;
     const enteredPassword = passwordInput.value;
 
-    if (!enteredUsername || !enteredPassword) {
-        alert('Please enter a username and password.');
-        return;
-    }
+    // if (!enteredUsername || !enteredPassword) {
+    //     alert('Please enter a username and password.');
+    //     return;
+    // }
 
     if (ws && ws.readyState === WebSocket.OPEN) {
         // Check if authentication is already in progress
@@ -124,3 +137,64 @@ subscribeBtn.addEventListener('click', () => {
         alert('Please connect first.');
     }
 });
+
+moveXButton.addEventListener('click', () => {
+    const moveX = moveXInput.value;
+    console.log("moveX", moveX);
+    
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
+      alert(`Move X: ${moveX}`);
+    } else {
+      alert('Please connect first.');
+    }
+  });
+  
+  moveYButton.addEventListener('click', () => {
+    const moveY = moveYInput.value;
+    console.log("moveY", moveY);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
+      alert(`Move Y: ${moveY}`);
+    } else {
+      alert('Please connect first.');
+    }
+  });
+  
+  laser.addEventListener('click', () => {
+  
+    const laserState = current_laser_sate ? 'on' : 'off';
+    console.log("current_laser_sate", current_laser_sate);
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'publish', topic: 'op/laser', message: laserState }));
+      alert(`Laser: ${laserState}`);
+      current_laser_sate = !current_laser_sate;
+    } else {
+      alert('Please connect first.');
+    }
+  });
+  
+  buzzer.addEventListener('click', () => {
+    const buzzerState = current_buzzer_sate ? 'on' : 'off';
+    console.log("current_buzzer_sate", current_buzzer_sate);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'publish', topic: 'op/buzzer', message: buzzerState }));
+      alert(`Buzzer: ${buzzerState}`);
+      current_buzzer_sate = !current_buzzer_sate;
+    } else {
+      alert('Please connect first.');
+    }
+  });
+  
+  light.addEventListener('click', () => {
+    const lightState = current_light_sate ? 'on' : 'off';
+    console.log("current_light_sate", current_light_sate);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'publish', topic: 'op/light', message: lightState }));
+      alert(`Light: ${lightState}`);
+      current_light_sate = !current_light_sate;
+    } else {
+      alert('Please connect first.');
+    }
+  });

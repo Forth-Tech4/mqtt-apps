@@ -9,7 +9,7 @@ const wss = new WebSocket.Server({ server });
 
 app.use(express.static('public'));
 
-const mqttBrokerUrl = 'mqtt://192.168.54.235:1883';
+const mqttBrokerUrl = 'mqtt://192.168.75.235:1883';
 
 wss.on('connection', (ws) => {
     console.log('WebSocket client connected');
@@ -23,10 +23,10 @@ wss.on('connection', (ws) => {
             const msg = JSON.parse(data);
             console.log('Parsed message:', msg);
 
-            if (msg.action === 'auth_check') {
-                ws.send(JSON.stringify({ isAuthInProgress: ws.isAuthInProgress }));
-                return;
-            }
+            // if (msg.action === 'auth_check') {
+            //     ws.send(JSON.stringify({ isAuthInProgress: ws.isAuthInProgress }));
+            //     return;
+            // }
 
             if (msg.action === 'auth') {
                 const { username, password } = msg;
@@ -38,7 +38,8 @@ wss.on('connection', (ws) => {
 
                 ws.isAuthInProgress = true;
                 console.log('Attempting MQTT connection for WebSocket...');
-                const mqttClient = mqtt.connect(mqttBrokerUrl, { username, password });
+                // const mqttClient = mqtt.connect(mqttBrokerUrl, { username, password });
+                const mqttClient = mqtt.connect(mqttBrokerUrl,);
                 ws.mqttClient = mqttClient; // Store MQTT client
 
                 mqttClient.on('connect', () => {
