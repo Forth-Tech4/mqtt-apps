@@ -114,7 +114,7 @@ moveYButton.addEventListener('click', () => {
 
 laser.addEventListener('click', () => {
   const laserState = current_laser_sate ? 'ON' : 'OFF';
-  ONsole.log("current_laser_sate", current_laser_sate);
+  console.log("current_laser_sate", current_laser_sate);
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'publish', topic: 'op/laser', message: laserState }));
     alert(`Laser: ${laserState}`);
