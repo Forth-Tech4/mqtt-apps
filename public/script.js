@@ -4,9 +4,8 @@ var current_buzzer_sate = false;
 var current_laser_sate = false;
 var current_light_sate = false;
 
-// for the controls
-const moveYInput = document.getElementById('move-y')
-const moveXInput = document.getElementById('move-x')
+const moveYInput = document.getElementById('move-y');
+const moveXInput = document.getElementById('move-x');
 const laser = document.querySelector('.leaser');
 const light = document.querySelector('.light');
 const buzzer = document.querySelector('.buzzer');
@@ -23,8 +22,13 @@ document.querySelector('.connect-btn').addEventListener('click', () => {
   })
     .then(res => res.json())
     .then(data => {
-      console.log(data);
-      startWebSocket();
+      if (data.error === 'mosquitto_down') {
+        alert('Mosquitto broker is not running.');
+      } else if (data.error === 'cert_failed') {
+        alert('Certificate authentication failed. Check your client.key, client.crt, or ca.crt.');
+      } else {
+        startWebSocket();
+      }
     })
     .catch(err => alert('Cert Upload Failed: ' + err));
 });
@@ -33,6 +37,7 @@ function startWebSocket() {
   ws = new WebSocket('ws://localhost:3001');
 
   ws.onopen = () => alert('WebSocket Connected');
+
   ws.onmessage = (event) => {
     const { topic, message, error } = JSON.parse(event.data);
     if (error) {
@@ -73,17 +78,14 @@ document.querySelector('.subscribe-btn').addEventListener('click', () => {
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'subscribe', topic }));
     alert(`Subscribed to ${topic}`);
-
   } else {
     alert('Connect first!');
   }
 });
 
-
 moveXButton.addEventListener('click', () => {
   const moveX = moveXInput.value;
   console.log("moveX", moveX);
-  
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
     alert(`Move X: ${moveX}`);
@@ -104,10 +106,8 @@ moveYButton.addEventListener('click', () => {
 });
 
 laser.addEventListener('click', () => {
-
   const laserState = current_laser_sate ? 'on' : 'off';
   console.log("current_laser_sate", current_laser_sate);
-
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'publish', topic: 'op/laser', message: laserState }));
     alert(`Laser: ${laserState}`);

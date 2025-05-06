@@ -16,6 +16,7 @@ app.use(express.static('public'));
 
 let mqttClient = null;
 let isMqttConnected = false;
+let lastCertError = false;
 
 // Handle cert uploads
 app.post('/upload-certs', upload.fields([
@@ -24,46 +25,62 @@ app.post('/upload-certs', upload.fields([
   { name: 'caCert' }
 ]), (req, res) => {
   const files = req.files;
+
+  if (!files.clientKey || !files.clientCert || !files.caCert) {
+    return res.json({ error: 'cert_failed' });
+  }
+
   const keyPath = files.clientKey[0].path;
   const certPath = files.clientCert[0].path;
   const caPath = files.caCert[0].path;
 
-  if (mqttClient) mqttClient.end();
+  try {
+    if (mqttClient) mqttClient.end(true);
 
-  mqttClient = mqtt.connect('mqtts://localhost:8883', {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath),
-    ca: fs.readFileSync(caPath),
-    rejectUnauthorized: true,
-    reconnectPeriod: 0
-  });
-
-  mqttClient.on('connect', () => {
-    isMqttConnected = true;
-    console.log('✅ MQTT Connected with TLS certs');
-  });
-
-  mqttClient.on('error', (err) => {
-    isMqttConnected = false;
-    console.error('❌ MQTT Error:', err.message);
-  });
-
-  mqttClient.on('message', (topic, message) => {
-    const payload = JSON.stringify({ topic, message: message.toString() });
-    wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(payload);
-      }
+    mqttClient = mqtt.connect('mqtts://localhost:8883', {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+      ca: fs.readFileSync(caPath),
+      rejectUnauthorized: true,
+      reconnectPeriod: 0
     });
-  });
 
-  res.json({ status: 'Certificates uploaded and MQTT connected.' });
+    mqttClient.on('connect', () => {
+      isMqttConnected = true;
+      lastCertError = false;
+      console.log('✅ MQTT Connected with TLS certs');
+      res.json({ status: 'connected' });
+    });
+
+    mqttClient.on('error', (err) => {
+      isMqttConnected = false;
+      lastCertError = true;
+      console.error('❌ MQTT Error:', err.message);
+      res.json({ error: 'cert_failed' });
+    });
+
+    mqttClient.on('message', (topic, message) => {
+      const payload = JSON.stringify({ topic, message: message.toString() });
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(payload);
+        }
+      });
+    });
+  } catch (e) {
+    console.error('❌ Exception during cert processing:', e.message);
+    return res.json({ error: 'cert_failed' });
+  }
 });
 
 // WebSocket Bridge
 wss.on('connection', (ws) => {
   if (!isMqttConnected) {
-    ws.send(JSON.stringify({ error: 'MQTT broker is not connected.' }));
+    if (lastCertError) {
+      ws.send(JSON.stringify({ error: 'Certificate authentication failed. Check client.key, client.crt, or ca.crt.' }));
+    } else {
+      ws.send(JSON.stringify({ error: 'MQTT broker is not connected.' }));
+    }
     ws.close();
     return;
   }
