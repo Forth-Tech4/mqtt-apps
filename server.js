@@ -45,19 +45,31 @@ app.post('/upload-certs', upload.fields([
       reconnectPeriod: 0
     });
 
-    mqttClient.on('connect', () => {
+    const handleConnect = () => {
       isMqttConnected = true;
       lastCertError = false;
       console.log('✅ MQTT Connected with TLS certs');
       res.json({ status: 'connected' });
-    });
 
-    mqttClient.on('error', (err) => {
+      mqttClient.off('connect', handleConnect);
+      mqttClient.off('error', handleError);
+    };
+
+    const handleError = (err) => {
       isMqttConnected = false;
       lastCertError = true;
       console.error('❌ MQTT Error:', err.message);
-      res.json({ error: 'cert_failed' });
-    });
+
+      if (!res.headersSent) {
+        res.json({ error: 'cert_failed' });
+      }
+
+      mqttClient.off('connect', handleConnect);
+      mqttClient.off('error', handleError);
+    };
+
+    mqttClient.on('connect', handleConnect);
+    mqttClient.on('error', handleError);
 
     mqttClient.on('message', (topic, message) => {
       const payload = JSON.stringify({ topic, message: message.toString() });
@@ -69,7 +81,9 @@ app.post('/upload-certs', upload.fields([
     });
   } catch (e) {
     console.error('❌ Exception during cert processing:', e.message);
-    return res.json({ error: 'cert_failed' });
+    if (!res.headersSent) {
+      return res.json({ error: 'cert_failed' });
+    }
   }
 });
 
