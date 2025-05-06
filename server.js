@@ -24,7 +24,12 @@ app.post('/upload-certs', upload.fields([
   { name: 'clientCert' },
   { name: 'caCert' }
 ]), (req, res) => {
+  const { hostname, port, clientId } = req.body;
   const files = req.files;
+
+  if (!hostname || !port) {
+    return res.json({ error: 'missing_host_or_port' });
+  }
 
   if (!files.clientKey || !files.clientCert || !files.caCert) {
     return res.json({ error: 'cert_failed' });
@@ -37,7 +42,9 @@ app.post('/upload-certs', upload.fields([
   try {
     if (mqttClient) mqttClient.end(true);
 
-    mqttClient = mqtt.connect('mqtts://localhost:8883', {
+    const mqttUrl = `mqtts://${hostname}:${port}`;
+
+    mqttClient = mqtt.connect(mqttUrl, {
       key: fs.readFileSync(keyPath),
       cert: fs.readFileSync(certPath),
       ca: fs.readFileSync(caPath),

@@ -1,20 +1,27 @@
 let ws;
 
-var current_buzzer_sate = false;
-var current_laser_sate = false;
-var current_light_sate = false;
+var current_buzzer_sate = true;
+var current_laser_sate = true;
+var current_light_sate = true;
 
 const moveYInput = document.getElementById('move-y');
 const moveXInput = document.getElementById('move-x');
-const laser = document.querySelector('.leaser');
+const laser = document.querySelector('.laser');
 const light = document.querySelector('.light');
 const buzzer = document.querySelector('.buzzer');
 const moveXButton = document.querySelector('.move-x-button');
 const moveYButton = document.querySelector('.move-y-button');
 
 document.querySelector('.connect-btn').addEventListener('click', () => {
+  const host = document.getElementById('host').value;
+  const port = document.getElementById('port').value;
+  // const clientId = document.getElementById('clientId').value;
+
   const form = document.getElementById('mqtt-config-form');
   const formData = new FormData(form);
+
+  formData.append('hostname', host);
+  formData.append('port', port);
 
   fetch('/upload-certs', {
     method: 'POST',
@@ -106,8 +113,8 @@ moveYButton.addEventListener('click', () => {
 });
 
 laser.addEventListener('click', () => {
-  const laserState = current_laser_sate ? 'on' : 'off';
-  console.log("current_laser_sate", current_laser_sate);
+  const laserState = current_laser_sate ? 'ON' : 'OFF';
+  ONsole.log("current_laser_sate", current_laser_sate);
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'publish', topic: 'op/laser', message: laserState }));
     alert(`Laser: ${laserState}`);
@@ -118,7 +125,7 @@ laser.addEventListener('click', () => {
 });
 
 buzzer.addEventListener('click', () => {
-  const buzzerState = current_buzzer_sate ? 'on' : 'off';
+  const buzzerState = current_buzzer_sate ? 'ON' : 'OFF';
   console.log("current_buzzer_sate", current_buzzer_sate);
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'publish', topic: 'op/buzzer', message: buzzerState }));
@@ -130,7 +137,7 @@ buzzer.addEventListener('click', () => {
 });
 
 light.addEventListener('click', () => {
-  const lightState = current_light_sate ? 'on' : 'off';
+  const lightState = current_light_sate ? 'ON' : 'OFF';
   console.log("current_light_sate", current_light_sate);
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'publish', topic: 'op/light', message: lightState }));
@@ -142,9 +149,8 @@ light.addEventListener('click', () => {
 });
 
 function clearFile(inputId) {
-    const input = document.getElementById(inputId);
-    if (input) {
-      input.value = ""; // Clear the selected file
-    }
+  const input = document.getElementById(inputId);
+  if (input) {
+    input.value = ""; // Clear the selected file
   }
-  
+}
