@@ -71,10 +71,19 @@ wss.on('connection', (ws) => {
 
                 mqttClient.on('error', (err) => {
                     console.error('MQTT Authentication error:', err);
-                    ws.send(JSON.stringify({ error: 'MQTT Authentication failed' }));
+                
+                    if (err.message.includes('Connection refused: Bad user name or password')) {
+                        ws.send(JSON.stringify({ error: 'Incorrect username or password. Please try again.' }));
+                    } else if (err.message.includes('Connection refused: Not authorized')) {
+                        ws.send(JSON.stringify({ error: 'Authorization failed. Check username/password or client certs.' }));
+                    } else {
+                        ws.send(JSON.stringify({ error: 'MQTT connection failed: ' + err.message }));
+                    }
+                
                     ws.isAuthInProgress = false;
-                    ws.close(); // Close WebSocket on MQTT authentication failure
+                    ws.close(); // Close WebSocket after sending the error
                 });
+                
 
                 mqttClient.on('message', (topic, message) => {
                     if (ws.isMQTTAuthenticated) {
