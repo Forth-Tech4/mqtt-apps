@@ -39,10 +39,32 @@
             </div> -->
 
             <form id="mqtt-config-form" enctype="multipart/form-data">
-                <label>Client Key: <input type="file" name="clientKey" required /></label><br/>
-                <label>Client Cert: <input type="file" name="clientCert" required /></label><br/>
-                <label>CA Cert: <input type="file" name="caCert" required /></label><br/>
-              </form>
+                <div class="file-input-group">
+                    <label for="clientKey">Client Key:</label>
+                    <div class="file-input-wrapper">
+                      <input type="file" id="clientKey" name="clientKey" />
+                      <button type="button" class="clear-btn" onclick="clearFile('clientKey')">Clear</button>
+                    </div>
+                  </div>
+                  
+                  <div class="file-input-group">
+                    <label for="clientCert">Client Cert:</label>
+                    <div class="file-input-wrapper">
+                      <input type="file" id="clientCert" name="clientCert" />
+                      <button type="button" class="clear-btn" onclick="clearFile('clientCert')">Clear</button>
+                    </div>
+                  </div>
+                  
+                  <div class="file-input-group">
+                    <label for="caCert">CA Cert:</label>
+                    <div class="file-input-wrapper">
+                      <input type="file" id="caCert" name="caCert" />
+                      <button type="button" class="clear-btn" onclick="clearFile('caCert')">Clear</button>
+                    </div>
+                  </div>
+                  
+            </form>
+            
               
 
             <div class="button-group">
@@ -71,24 +93,6 @@
         </div>
 
         <div class="card">
-            <h2>Subscriber</h2>
-            <div class="form-group">
-                <label for="Subscriber">Topic</label>
-                <input type="text" id="Subscriber" placeholder="Topic">
-            </div>
-            <div class="button-group">
-                <button class="subscribe-btn">Subscribe</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Receiver</h2>
-            <div class="receiver-box" id="receiverBox">
-               
-            </div>
-        </div>
-
-        <div class="card">
             <h2>Controls</h2>
             <div class="control-box">
                 <div class="form-group">
@@ -110,6 +114,26 @@
                 <button class="buzzer">Buzzer</button>
             </div>
         </div>
+
+        <div class="card">
+            <h2>Subscriber</h2>
+            <div class="form-group">
+                <label for="Subscriber">Topic</label>
+                <input type="text" id="Subscriber" placeholder="Topic">
+            </div>
+            <div class="button-group">
+                <button class="subscribe-btn">Subscribe</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Receiver</h2>
+            <div class="receiver-box" id="receiverBox">
+               
+            </div>
+        </div>
+
+       
 
 
     </div>

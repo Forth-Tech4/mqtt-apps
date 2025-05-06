@@ -161,3 +161,43 @@ button {
   gap: 10px;
   align-items: center;
 }
+
+.file-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.file-input-group label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.file-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-input-wrapper input[type="file"] {
+  flex-grow: 1;
+  padding: 5px;
+  font-size: 14px;
+}
+
+.clear-btn {
+  background-color: #e53935;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.clear-btn:hover {
+  background-color: #c62828;
+}

@@ -140,3 +140,11 @@ light.addEventListener('click', () => {
     alert('Please connect first.');
   }
 });
+
+function clearFile(inputId) {
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.value = ""; // Clear the selected file
+    }
+  }
+  
