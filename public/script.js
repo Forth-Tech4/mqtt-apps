@@ -4,13 +4,23 @@ var current_buzzer_sate = true;
 var current_laser_sate = true;
 var current_light_sate = true;
 
-const moveYInput = document.getElementById('move-y');
-const moveXInput = document.getElementById('move-x');
+const moveXSlider = document.getElementById('move-x');
+const moveYSlider = document.getElementById('move-y');
+const moveXValueDisplay = document.getElementById('move-x-value');
+const moveYValueDisplay = document.getElementById('move-y-value');
 const laser = document.querySelector('.laser');
 const light = document.querySelector('.light');
 const buzzer = document.querySelector('.buzzer');
 const moveXButton = document.querySelector('.move-x-button');
 const moveYButton = document.querySelector('.move-y-button');
+
+moveXSlider.addEventListener('input', () => {
+  moveXValueDisplay.textContent = moveXSlider.value;
+});
+
+moveYSlider.addEventListener('input', () => {
+  moveYValueDisplay.textContent = moveYSlider.value;
+});
 
 document.querySelector('.connect-btn').addEventListener('click', () => {
   const host = document.getElementById('host').value;
@@ -90,27 +100,61 @@ document.querySelector('.subscribe-btn').addEventListener('click', () => {
   }
 });
 
-moveXButton.addEventListener('click', () => {
-  const moveX = moveXInput.value;
-  console.log("moveX", moveX);
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
-    alert(`Move X: ${moveX}`);
-  } else {
-    alert('Please connect first.');
-  }
+// moveXButton.addEventListener('click', () => {
+//   const moveX = moveXSlider.value;
+//   console.log("moveX", moveX);
+//   if (ws && ws.readyState === WebSocket.OPEN) {
+//     ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
+//     alert(`Move X: ${moveX}`);
+//   } else {
+//     alert('Please connect first.');
+//   }
+// });
+
+// moveYButton.addEventListener('click', () => {
+//   const moveY = moveYSlider.value;
+//   console.log("moveY", moveY);
+//   if (ws && ws.readyState === WebSocket.OPEN) {
+//     ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
+//     alert(`Move Y: ${moveY}`);
+//   } else {
+//     alert('Please connect first.');
+//   }
+// });
+
+let moveXTimeout;
+let moveYTimeout;
+
+moveXSlider.addEventListener('input', () => {
+  clearTimeout(moveXTimeout);  
+  moveXTimeout = setTimeout(() => {
+    const moveX = moveXSlider.value;
+    moveXValueDisplay.textContent = moveX; 
+
+    // Send the updated value to the WebSocket
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
+      box.scrollTop = box.scrollHeight;  // Auto-scroll to the bottom
+    } else {
+      alert('Please connect first.');
+    }
+  }, 500); // Delay of 500ms after user stops sliding
 });
 
-moveYButton.addEventListener('click', () => {
-  const moveY = moveYInput.value;
-  console.log("moveY", moveY);
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
-    alert(`Move Y: ${moveY}`);
-  } else {
-    alert('Please connect first.');
-  }
+moveYSlider.addEventListener('input', () => {
+  clearTimeout(moveYTimeout);  
+  moveYTimeout = setTimeout(() => {
+    const moveY = moveYSlider.value;
+    moveYValueDisplay.textContent = moveY; 
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
+      box.scrollTop = box.scrollHeight;  // Auto-scroll to the bottom
+    } else {
+      alert('Please connect first.');
+    }
+  }, 500); // Delay of 500ms after user stops sliding
 });
+
 
 laser.addEventListener('click', () => {
   const laserState = current_laser_sate ? 'ON' : 'OFF';
