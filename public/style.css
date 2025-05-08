@@ -201,3 +201,88 @@ button {
 .clear-btn:hover {
   background-color: #c62828;
 }
+
+/* ... other CSS ... */
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; 
+  gap: 30px; 
+}
+
+.controls-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px; 
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; 
+}
+
+.controls-right {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto; 
+  gap: 30px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #555;
+}
+
+.move-x-slider,
+.move-y-slider {
+  padding: 0;
+}
+
+.action-button { 
+  padding: 10px 15px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 0.3s, color 0.3s;
+  background-color: #f0f0f0;
+  color: #333;
+  text-align: center; 
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .controls-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .controls-right {
+    grid-template-columns: 1fr 1fr; 
+  }
+}
+
+@media (max-width: 400px) {
+  .controls-right {
+    grid-template-columns: 1fr;
+  }
+}
+
+#accordion-content {
+  transition: all 0.3s ease;
+}
+
+.accordion-header {
+  cursor: pointer;
+display: flex;
+justify-content: space-between;
+align-items: center;
+
+}

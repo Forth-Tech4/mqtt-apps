@@ -6,118 +6,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>MQTT UI</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 
 <body>
     <div class="main-container">
         <div class="card">
-            <h2>Connection</h2>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="host">Host</label>
-                    <input type="text" id="host" placeholder="Host">
+            <h2 onclick="toggleAccordion()" class="accordion-header">
+                Connection
+                <i id="accordion-icon" class="fa-solid fa-angle-down" style="transition: transform 0.3s;"></i>
+            </h2>
+
+            <div id="accordion-content" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="host">Host</label>
+                        <input type="text" id="host" placeholder="Host">
+                    </div>
+                    <div class="form-group">
+                        <label for="port">Port</label>
+                        <input type="text" id="port" placeholder="Port">
+                    </div>
+                    <div class="form-group">
+                        <label for="clientId">Client ID</label>
+                        <input type="text" id="clientId" placeholder="Client ID">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="port">Port</label>
-                    <input type="text" id="port" placeholder="Port">
-                </div>
-                <div class="form-group">
-                    <label for="clientId">Client ID</label>
-                    <input type="text" id="clientId" placeholder="Client ID">
+                <form id="mqtt-config-form" enctype="multipart/form-data">
+                    <div class="file-input-group">
+                        <label for="clientKey">Client Key:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="clientKey" name="clientKey"/>
+                            <button type="button" class="clear-btn" onclick="clearFile('clientKey')">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="file-input-group">
+                        <label for="clientCert">Client Cert:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="clientCert" name="clientCert" />
+                            <button type="button" class="clear-btn" onclick="clearFile('clientCert')">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="file-input-group">
+                        <label for="caCert">CA Cert:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="caCert" name="caCert" />
+                            <button type="button" class="clear-btn" onclick="clearFile('caCert')">Clear</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="button-group">
+                    <button class="connect-btn">Connect</button>
+                    <button class="disconnect-btn">Disconnect</button>
                 </div>
             </div>
 
-            <!-- <div class="form-row">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" placeholder="Username">
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Password">
-                </div>
-            </div> -->
-
-            <form id="mqtt-config-form" enctype="multipart/form-data">
-                <div class="file-input-group">
-                    <label for="clientKey">Client Key:</label>
-                    <div class="file-input-wrapper">
-                        <input type="file" id="clientKey" name="clientKey" />
-                        <button type="button" class="clear-btn" onclick="clearFile('clientKey')">Clear</button>
-                    </div>
-                </div>
-
-                <div class="file-input-group">
-                    <label for="clientCert">Client Cert:</label>
-                    <div class="file-input-wrapper">
-                        <input type="file" id="clientCert" name="clientCert" />
-                        <button type="button" class="clear-btn" onclick="clearFile('clientCert')">Clear</button>
-                    </div>
-                </div>
-
-                <div class="file-input-group">
-                    <label for="caCert">CA Cert:</label>
-                    <div class="file-input-wrapper">
-                        <input type="file" id="caCert" name="caCert" />
-                        <button type="button" class="clear-btn" onclick="clearFile('caCert')">Clear</button>
-                    </div>
-                </div>
-
-            </form>
-
-
-
-            <div class="button-group">
-                <button class="connect-btn">Connect</button>
-                <button class="disconnect-btn">Disconnect</button>
-            </div>
         </div>
 
-        <div class="card">
+        <div class="card controls-section">
             <h2>Controls</h2>
-            <div class="control-box">
-                <div class="form-group">
-                    <label for="move-x">Move X</label>
-                    <!-- Slider for Move X -->
-                    <input type="range" id="move-x" min="0" max="220" value="0" step="1">
-                    <span id="move-x-value">0</span> <!-- Display the current value -->
+            <div class="controls-grid">
+                <div class="controls-left">
+                    <div class="control-item">
+                        <div class="form-group">
+                            <label for="move-x">Move X</label>
+                            <input type="range" id="move-x" min="0" max="220" value="0" step="1" class="move-x-slider">
+                            <span id="move-x-value">0</span>
+                        </div>
+                        <button class="move-x-button action-button">Move X</button>
+                    </div>
+
+                    <div class="control-item">
+                        <div class="form-group">
+                            <label for="move-y">Move Y</label>
+                            <input type="range" id="move-y" min="0" max="180" value="0" step="1" class="move-y-slider">
+                            <span id="move-y-value">0</span>
+                        </div>
+                        <button class="move-y-button action-button">Move Y</button>
+                    </div>
                 </div>
-                <button class="move-x-button">Move X</button>
-            </div>
-            
-            <div class="control-box">
-                <div class="form-group">
-                    <label for="move-y">Move Y</label>
-                    <!-- Slider for Move Y -->
-                    <input type="range" id="move-y" min="0" max="180" value="0" step="1">
-                    <span id="move-y-value">0</span> <!-- Display the current value -->
+
+                <div class="controls-right">
+                    <button class="control-button laser-btn action-button">laser</button>
+                    <button class="control-button light-btn action-button">Light</button>
+                    <button class="control-button buzzer-btn action-button">Buzzer</button>
+                    <button class="control-button water-btn action-button">Water</button>
                 </div>
-                <button class="move-y-button">Move Y</button>
-            </div>
-            
-            <div class="button-controls">
-                <button class="laser">laser</button>
-                <button class="light">Light</button>
-                <button class="buzzer">Buzzer</button>
             </div>
         </div>
 
         <div class="card">
-            <h2>Publisher</h2>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="topic">Topic</label>
-                    <input type="text" id="topic" placeholder="Topic">
+            <h2 onclick="togglePublisherAccordion()" class="accordion-header">
+                Publisher
+                <i id="publisher-icon" class="fa-solid fa-angle-down" style="transition: transform 0.3s;"></i>
+            </h2>
+            <div id="publisher-content" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="topic">Topic</label>
+                        <input type="text" id="topic" placeholder="Topic">
+                    </div>
                 </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="payload">Payload</label>
-                    <textarea id="payload" placeholder="Payload"></textarea>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="payload">Payload</label>
+                        <textarea id="payload" placeholder="Payload"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="button-group">
-                <button class="publish-btn">Publish</button>
+                <div class="button-group">
+                    <button class="publish-btn">Publish</button>
+                </div>
             </div>
         </div>
 
@@ -140,10 +141,6 @@
 
             </div>
         </div>
-
-
-
-
     </div>
 
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -151,3 +148,4 @@
 </body>
 
 </html>
+

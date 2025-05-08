@@ -3,14 +3,16 @@ let ws;
 var current_buzzer_sate = true;
 var current_laser_sate = true;
 var current_light_sate = true;
+var current_water_sate = true;
 
 const moveXSlider = document.getElementById('move-x');
 const moveYSlider = document.getElementById('move-y');
 const moveXValueDisplay = document.getElementById('move-x-value');
 const moveYValueDisplay = document.getElementById('move-y-value');
-const laser = document.querySelector('.laser');
-const light = document.querySelector('.light');
-const buzzer = document.querySelector('.buzzer');
+const laser = document.querySelector('.laser-btn');
+const light = document.querySelector('.light-btn');
+const buzzer = document.querySelector('.buzzer-btn');
+const water = document.querySelector('.water-btn');
 const moveXButton = document.querySelector('.move-x-button');
 const moveYButton = document.querySelector('.move-y-button');
 
@@ -23,6 +25,12 @@ moveYSlider.addEventListener('input', () => {
 });
 
 document.querySelector('.connect-btn').addEventListener('click', () => {
+
+  if (ws?.readyState === WebSocket.OPEN) {
+    alert('Already connected!');
+    return;
+  }
+
   const host = document.getElementById('host').value;
   const port = document.getElementById('port').value;
   // const clientId = document.getElementById('clientId').value;
@@ -73,13 +81,23 @@ function startWebSocket() {
 }
 
 document.querySelector('.disconnect-btn').addEventListener('click', () => {
-  if (ws) ws.close();
-  alert('WebSocket Disconnected');
+  if (ws?.readyState === WebSocket.OPEN) {
+    ws.close();
+    alert('WebSocket Disconnected');
+  } else {
+    alert('You are not connected. Please connect first.');
+  }
 });
+
 
 document.querySelector('.publish-btn').addEventListener('click', () => {
   const topic = document.getElementById('topic').value;
   const payload = document.getElementById('payload').value;
+
+  if (!topic || !payload) {
+    alert('Topic and payload cannot be empty!');
+    return;
+  }
 
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'publish', topic, message: payload }));
@@ -92,6 +110,11 @@ document.querySelector('.publish-btn').addEventListener('click', () => {
 document.querySelector('.subscribe-btn').addEventListener('click', () => {
   const topic = document.getElementById('Subscriber').value;
 
+  if (!topic) {
+    alert('Subscription topic cannot be empty!');
+    return;
+  }
+
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: 'subscribe', topic }));
     alert(`Subscribed to ${topic}`);
@@ -100,61 +123,27 @@ document.querySelector('.subscribe-btn').addEventListener('click', () => {
   }
 });
 
-// moveXButton.addEventListener('click', () => {
-//   const moveX = moveXSlider.value;
-//   console.log("moveX", moveX);
-//   if (ws && ws.readyState === WebSocket.OPEN) {
-//     ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
-//     alert(`Move X: ${moveX}`);
-//   } else {
-//     alert('Please connect first.');
-//   }
-// });
-
-// moveYButton.addEventListener('click', () => {
-//   const moveY = moveYSlider.value;
-//   console.log("moveY", moveY);
-//   if (ws && ws.readyState === WebSocket.OPEN) {
-//     ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
-//     alert(`Move Y: ${moveY}`);
-//   } else {
-//     alert('Please connect first.');
-//   }
-// });
-
-let moveXTimeout;
-let moveYTimeout;
-
-moveXSlider.addEventListener('input', () => {
-  clearTimeout(moveXTimeout);  
-  moveXTimeout = setTimeout(() => {
-    const moveX = moveXSlider.value;
-    moveXValueDisplay.textContent = moveX; 
-
-    // Send the updated value to the WebSocket
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
-      box.scrollTop = box.scrollHeight;  // Auto-scroll to the bottom
-    } else {
-      alert('Please connect first.');
-    }
-  }, 500); // Delay of 500ms after user stops sliding
+moveXButton.addEventListener('click', () => {
+  const moveX = moveXSlider.value;
+  console.log("moveX", moveX);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
+    alert(`Move X: ${moveX}`);
+  } else {
+    alert('Please connect first.');
+  }
 });
 
-moveYSlider.addEventListener('input', () => {
-  clearTimeout(moveYTimeout);  
-  moveYTimeout = setTimeout(() => {
-    const moveY = moveYSlider.value;
-    moveYValueDisplay.textContent = moveY; 
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
-      box.scrollTop = box.scrollHeight;  // Auto-scroll to the bottom
-    } else {
-      alert('Please connect first.');
-    }
-  }, 500); // Delay of 500ms after user stops sliding
+moveYButton.addEventListener('click', () => {
+  const moveY = moveYSlider.value;
+  console.log("moveY", moveY);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
+    alert(`Move Y: ${moveY}`);
+  } else {
+    alert('Please connect first.');
+  }
 });
-
 
 laser.addEventListener('click', () => {
   const laserState = current_laser_sate ? 'ON' : 'OFF';
@@ -192,9 +181,78 @@ light.addEventListener('click', () => {
   }
 });
 
+water.addEventListener('click', () => {
+  const waterState = current_water_sate ? 'ON' : 'OFF';
+  console.log("current_water_sate", current_water_sate);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'publish', topic: 'op/water', message: waterState }));
+    alert(`Water: ${waterState}`);
+    current_water_sate = !current_water_sate;
+  } else {
+    alert('Please connect first.');
+  }
+}
+);
+
+function toggleAccordion() {
+  const content = document.getElementById("accordion-content");
+  const icon = document.getElementById("accordion-icon");
+
+  if (content.style.display === "none" || content.style.display === "") {
+    content.style.display = "block";
+    icon.style.transform = "rotate(180deg)";
+  } else {
+    content.style.display = "none";
+    icon.style.transform = "rotate(0deg)";
+  }
+}
+
+function togglePublisherAccordion() {
+  const content = document.getElementById('publisher-content');
+  const icon = document.getElementById('publisher-icon');
+
+  const isVisible = content.style.display === 'block';
+  content.style.display = isVisible ? 'none' : 'block';
+  icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+
 function clearFile(inputId) {
   const input = document.getElementById(inputId);
   if (input) {
-    input.value = ""; // Clear the selected file
+    input.value = "";
   }
 }
+
+// let moveXTimeout;
+// let moveYTimeout;
+
+// moveXSlider.addEventListener('input', () => {
+//   clearTimeout(moveXTimeout);  
+//   moveXTimeout = setTimeout(() => {
+//     const moveX = moveXSlider.value;
+//     moveXValueDisplay.textContent = moveX; 
+
+//     // Send the updated value to the WebSocket
+//     if (ws && ws.readyState === WebSocket.OPEN) {
+//       ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/x', message: moveX }));
+//       box.scrollTop = box.scrollHeight;  // Auto-scroll to the bottom
+//     } else {
+//       alert('Please connect first.');
+//     }
+//   }, 500); // Delay of 500ms after user stops sliding
+// });
+
+// moveYSlider.addEventListener('input', () => {
+//   clearTimeout(moveYTimeout);  
+//   moveYTimeout = setTimeout(() => {
+//     const moveY = moveYSlider.value;
+//     moveYValueDisplay.textContent = moveY; 
+//     if (ws && ws.readyState === WebSocket.OPEN) {
+//       ws.send(JSON.stringify({ action: 'publish', topic: 'op/move/y', message: moveY }));
+//       box.scrollTop = box.scrollHeight;  // Auto-scroll to the bottom
+//     } else {
+//       alert('Please connect first.');
+//     }
+//   }, 500); // Delay of 500ms after user stops sliding
+// });
