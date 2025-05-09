@@ -5,6 +5,8 @@ import ControlsCard from './ControlsCard';
 import PublisherCard from './PublisherCard';
 import SubscriberCard from './SubscriberCard';
 import ReceiverCard from './ReceiverCard';
+import '../utils/fontawesome';
+import { showToast } from '../utils/ToastComponent';
 
 const Main = () => {
   const { ws, isConnected, messages, connectWebSocket, disconnectWebSocket, publishMessage, subscribeTopic } = useWebSocket();
@@ -27,28 +29,28 @@ const Main = () => {
 
   const handleSubscribe = (topic) => {
     if (!isConnected) {
-      alert('Please connect to WebSocket first!');
+      showToast('error','Please connect to WebSocket first!');
       return;
     }
     if (!topic || topic.trim() === '') {
-      alert('Please enter a valid topic to subscribe to!');
+      showToast('error', 'Please enter a valid topic to subscribe to!');
       return;
     }
     subscribeTopic(topic);
-    alert(`Subscribed to topic: ${topic}`);
+    showToast("success", `Subscribed to topic: ${topic}`);
   };
 
   const handlePublish = (topic, payload) => {
     if (!isConnected) {
-      alert('Please connect to WebSocket first!');
+      showToast('error' ,'Please connect to WebSocket first!');
       return;
     }
     if (!topic || topic.trim() === '' || !payload || payload.trim() === '') {
-      alert('Topic and payload must not be empty!');
+      showToast('error' ,'Topic and payload must not be empty!');
       return;
     }
     publishMessage(topic, payload);
-    alert(`Published to topic: ${topic} with message: ${payload}`);
+    showToast('success' ,`Published to topic: ${topic} with message: ${payload}`);
   };
 
   return (
@@ -63,11 +65,6 @@ const Main = () => {
           <PublisherCard onPublish={handlePublish} isConnected={isConnected} />
           <SubscriberCard onSubscribe={handleSubscribe} />
           <ReceiverCard messages={messages} />
-          <div className="grid grid-cols-3 gap-4">
-            <button onClick={() => handleDeviceToggle('laser')}>Toggle Laser</button>
-            <button onClick={() => handleDeviceToggle('light')}>Toggle Light</button>
-            <button onClick={() => handleDeviceToggle('buzzer')}>Toggle Buzzer</button>
-          </div>
         </div>
       </div>
     </div>

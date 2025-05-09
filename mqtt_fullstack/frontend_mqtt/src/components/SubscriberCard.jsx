@@ -8,8 +8,8 @@ function SubscriberCard({ onSubscribe }) {
   };
 
   return (
-    <div className="bg-white p-5 rounded-md shadow-md mb-8">
-      <h2 className="mt-0 mb-5 text-xl text-gray-800">Subscriber</h2>
+    <div className="bg-white p-5 rounded-md shadow-md mb-2">
+      <h2 className="mt-0 mb-5 text-2xl font-semibold text-gray-800">Subscriber</h2>
       <div className="mb-5">
         <label htmlFor="Subscriber" className="block text-gray-700 text-sm font-medium mb-1">Topic</label>
         <input

@@ -11,8 +11,8 @@ function ReceiverCard({ messages }) {
   }, [messages]);
 
   return (
-    <div className="bg-white p-5 rounded-md shadow-md mb-8">
-      <h2 className="mt-0 mb-5 text-xl text-gray-800">Receiver</h2>
+    <div className="bg-white p-5 rounded-md shadow-md mb-2">
+      <h2 className="mt-0 mb-5 text-2xl font-semibold text-gray-800">Receiver</h2>
       <div
         id="receiverBox"
         ref={receiverRef}

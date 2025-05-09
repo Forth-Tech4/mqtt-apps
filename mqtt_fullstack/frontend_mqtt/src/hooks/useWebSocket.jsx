@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { showToast } from '../utils/ToastComponent';
 
 function useWebSocket() {
   const [ws, setWs] = useState(null);
@@ -31,7 +32,7 @@ function useWebSocket() {
       console.log('WebSocket Disconnected');
       setIsConnected(false);
       setWs(null); 
-      alert('WebSocket disconnected.');
+      showToast('error' ,'WebSocket disconnected.');
     };
 
     socket.onerror = (error) => {

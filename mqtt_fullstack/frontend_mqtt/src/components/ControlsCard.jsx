@@ -1,37 +1,39 @@
 import React, { useState } from 'react';
+import { showToast } from '../utils/ToastComponent';
 
-// Constants for MQTT topics
 const TOPICS = {
   MOVE_X: 'op/move/x',
   MOVE_Y: 'op/move/y',
   LASER: 'op/laser',
   LIGHT: 'op/light',
   BUZZER: 'op/buzzer',
+  WATER: 'op/water'
 };
 
 function ControlsCard({ onPublish }) {
-  const [moveX, setMoveX] = useState('');
-  const [moveY, setMoveY] = useState('');
+  const [moveX, setMoveX] = useState(0);
+  const [moveY, setMoveY] = useState(0);
   const [laserState, setLaserState] = useState('OFF');
   const [lightState, setLightState] = useState('OFF');
   const [buzzerState, setBuzzerState] = useState('OFF');
+  const [waterState, setWaterState] = useState('OFF');
 
-  // Handlers
-  const handleMoveX = () => {
-    if (!moveX || isNaN(moveX)) {
-      alert('Enter a valid X coordinate.');
-      return;
-    }
-    onPublish(TOPICS.MOVE_X, moveX);
-  };
+ const handleMoveX = () => {
+  if (moveX === null || moveX === undefined || isNaN(moveX)) {
+    showToast("error" ,"Invalid value for Move X");
+    return;
+  }
+  onPublish(TOPICS.MOVE_X, moveX.toString());
+};
 
-  const handleMoveY = () => {
-    if (!moveY || isNaN(moveY)) {
-      alert('Enter a valid Y coordinate.');
-      return;
-    }
-    onPublish(TOPICS.MOVE_Y, moveY);
-  };
+const handleMoveY = () => {
+  if (moveY === null || moveY === undefined || isNaN(moveY)) {
+    showToast("error" ,"Invalid value for Move Y");
+    return;
+  }
+  onPublish(TOPICS.MOVE_Y, moveY.toString());
+};
+
 
   const handleToggle = (state, setState, topic) => {
     const newState = state === 'ON' ? 'OFF' : 'ON';
@@ -40,77 +42,83 @@ function ControlsCard({ onPublish }) {
   };
 
   return (
-    <div className="bg-white p-5 rounded-md shadow-md mb-8">
-      <h2 className="text-xl text-gray-800 mb-5">Controls</h2>
+    <div className="bg-white p-5 rounded-md shadow-md w-full max-w-4xl mx-auto mb-2">
+      <h2 className="text-2xl font-semibold mb-6 text-gray-800">Controls</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left side: sliders */}
+        <div className="md:col-span-2 flex flex-col gap-6">
+          {/* Move X */}
+          <div className="flex flex-col gap-3">
+            <label htmlFor="move-x" className="text-sm font-medium text-gray-600">Move X</label>
+            <input
+              type="range"
+              id="move-x"
+              min="0"
+              max="220"
+              step="1"
+              value={moveX}
+              onChange={(e) => setMoveX(Number(e.target.value))}
+              className="w-full"
+            />
+            <span className="text-gray-700">Value: {moveX}</span>
+            <button
+              onClick={handleMoveX}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition"
+            >
+              Move X
+            </button>
+          </div>
 
-      {/* Move X */}
-      <div className="flex gap-2 items-center mb-5">
-        <div className="flex-1">
-          <label htmlFor="move-x" className="block text-gray-700 text-sm font-medium mb-1">Move X</label>
-          <input
-            type="number"
-            id="move-x"
-            placeholder="value"
-            min="0"
-            max="220"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={moveX}
-            onChange={(e) => setMoveX(e.target.value)}
-          />
+          {/* Move Y */}
+          <div className="flex flex-col gap-3">
+            <label htmlFor="move-y" className="text-sm font-medium text-gray-600">Move Y</label>
+            <input
+              type="range"
+              id="move-y"
+              min="0"
+              max="180"
+              step="1"
+              value={moveY}
+              onChange={(e) => setMoveY(Number(e.target.value))}
+              className="w-full"
+            />
+            <span className="text-gray-700">Value: {moveY}</span>
+            <button
+              onClick={handleMoveY}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition"
+            >
+              Move Y
+            </button>
+          </div>
         </div>
-        <button
-          className="bg-blue-500 mt-auto hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
-          onClick={handleMoveX}
-          disabled={!moveX}
-        >
-          Move X
-        </button>
-      </div>
 
-      {/* Move Y */}
-      <div className="flex gap-2 items-center mb-5">
-        <div className="flex-1">
-          <label htmlFor="move-y" className="block text-gray-700 text-sm font-medium mb-1">Move Y</label>
-          <input
-            type="number"
-            id="move-y"
-            placeholder="value"
-            min="0"
-            max="180"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={moveY}
-            onChange={(e) => setMoveY(e.target.value)}
-          />
+        {/* Right side: toggles */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6">
+          <button
+            onClick={() => handleToggle(laserState, setLaserState, TOPICS.LASER)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition"
+          >
+            Laser ({laserState})
+          </button>
+          <button
+            onClick={() => handleToggle(lightState, setLightState, TOPICS.LIGHT)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition"
+          >
+            Light ({lightState})
+          </button>
+          <button
+            onClick={() => handleToggle(buzzerState, setBuzzerState, TOPICS.BUZZER)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition"
+          >
+            Buzzer ({buzzerState})
+          </button>
+          <button
+            onClick={() => handleToggle(waterState, setWaterState, TOPICS.WATER)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition"
+          >
+            Water ({waterState})
+          </button>
         </div>
-        <button
-          className="bg-blue-500 mt-auto hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
-          onClick={handleMoveY}
-          disabled={!moveY}
-        >
-          Move Y
-        </button>
-      </div>
-
-      {/* Toggles */}
-      <div className="flex gap-2 items-center">
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
-          onClick={() => handleToggle(laserState, setLaserState, TOPICS.LASER)}
-        >
-          Toggle Laser ({laserState})
-        </button>
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
-          onClick={() => handleToggle(lightState, setLightState, TOPICS.LIGHT)}
-        >
-          Toggle Light ({lightState})
-        </button>
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
-          onClick={() => handleToggle(buzzerState, setBuzzerState, TOPICS.BUZZER)}
-        >
-          Toggle Buzzer ({buzzerState})
-        </button>
       </div>
     </div>
   );
