@@ -2,7 +2,8 @@ const { connectWithCerts } = require('../models/mqttClient');
 const path = require('path');
 
 exports.uploadCerts = (req, res) => {
-  const { hostname, port } = req.body;
+  const hostname = req.body.hostname || process.env.MQTT_HOST;
+  const port = req.body.port || process.env.MQTT_PORT;
   const files = req.files;
 
   if (!hostname || !port) return res.json({ error: 'missing_host_or_port' });

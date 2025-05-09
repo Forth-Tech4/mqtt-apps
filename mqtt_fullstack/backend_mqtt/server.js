@@ -125,6 +125,10 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local',
+})
 const app = express();
 const server = http.createServer(app);
 const mqttRoutes = require('./routes/mqttRoutes');

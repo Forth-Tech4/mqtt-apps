@@ -7,7 +7,7 @@ function useWebSocket() {
   const [messages, setMessages] = useState([]);
 
   const connectWebSocket = (host, port) => {
-    const socket = new WebSocket(`ws://${host}:3001`);
+    const socket = new WebSocket(`ws://${import.meta.env.VITE_WEBSOCKET_HOST}:${import.meta.env.VITE_WEBSOCKET_PORT}`);
 
     socket.onopen = () => {
       console.log('WebSocket Connected');

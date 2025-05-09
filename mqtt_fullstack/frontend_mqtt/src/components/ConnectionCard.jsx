@@ -56,7 +56,7 @@ function ConnectionCard({ onConnect, onDisconnect }) {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/upload-certs', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/upload-certs`, {
         method: 'POST',
         body: formData,
       });

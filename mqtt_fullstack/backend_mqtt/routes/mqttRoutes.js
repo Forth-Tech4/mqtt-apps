@@ -3,7 +3,8 @@ const multer = require('multer');
 const router = express.Router();
 const mqttController = require('../controllers/mqttController');
 
-const upload = multer({ dest: 'uploads/' });
+const uploadDir = process.env.UPLOAD_DIR || 'uploads/';
+const upload = multer({ dest: uploadDir });
 
 router.post('/upload-certs', upload.fields([
   { name: 'clientKey' },
