@@ -1,13 +1,13 @@
 /* Custom progress bar colors for each toast type */
 .custom-progress-success {
-  background: #4caf50 !important; /* green */
-}
-.custom-progress-error {
-  background: #f44336 !important; /* red */
-}
-.custom-progress-warn {
-  background: #ff9800 !important; /* orange */
-}
-.custom-progress-info {
-  background: #2196f3 !important; /* blue */
-}
+    background: #4caf50 !important; /* green */
+  }
+  .custom-progress-error {
+    background: #f44336 !important; /* red */
+  }
+  .custom-progress-warn {
+    background: #ff9800 !important; /* orange */
+  }
+  .custom-progress-info {
+    background: #2196f3 !important; /* blue */
+  }

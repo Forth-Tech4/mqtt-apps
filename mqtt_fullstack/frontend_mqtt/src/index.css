@@ -8,3 +8,26 @@
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out;
   }
+
+
+
+  /* Centered slider without fill */
+input[type="range"].no-fill::-webkit-slider-runnable-track {
+  background: #e5e7eb; /* Tailwind gray-200 */
+}
+input[type="range"].no-fill::-moz-range-track {
+  background: #e5e7eb;
+}
+input[type="range"].no-fill::-webkit-slider-thumb {
+  background-color: #4b5563; /* Tailwind gray-700 */
+  border-radius: 9999px;
+  cursor: pointer;
+}
+input[type="range"].no-fill::-moz-range-thumb {
+  background-color: #4b5563;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+input[type="range"].no-fill {
+  background: transparent;
+}
