@@ -210,15 +210,9 @@ function ControlsCard({ onPublish, clientId, deviceState }) {
             className={`${clientId ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-100 cursor-not-allowed'} text-gray-800 font-medium py-2 px-4 rounded transition`}
             disabled={!clientId}
           >
-            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light for specific
+            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light 
           </button>
-          <button
-            onClick={toggleLight}
-            className={`${clientId ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-100 cursor-not-allowed'} text-gray-800 font-medium py-2 px-4 rounded transition`}
-            disabled={!clientId}
-          >
-            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light for All
-          </button>
+          
         </div>
 
         {/* Laser Control */}

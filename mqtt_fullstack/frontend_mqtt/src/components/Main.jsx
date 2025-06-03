@@ -65,9 +65,14 @@ const Main = () => {
     clearMessages
   } = useWebSocket(handleDeviceUpdate);
 
-  const handleConnect = (host, port, username) => {
-    connectWebSocket(host, port, username);
-  };
+ const handleConnect = (host, port, username) => {
+  connectWebSocket(host, port, username);
+  
+  // Auto-subscribe to the fixed topic after small delay to ensure connection
+  // setTimeout(() => {
+  //   subscribeTopic('Forthtech/10:10:10:10');
+  // }, 500);
+};
 
   const handleSubscribe = (topic) => {
     if (!isConnected) {

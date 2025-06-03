@@ -191,9 +191,8 @@ function useWebSocket(onDeviceUpdate) {
       return;
     }
 
-  
-
-    const topic = `${clientId}/${peripheral}`; // clientId will be 'Forthtech'
+   const MAC_ADDRESS = '10:10:10:10'; // 👈 your static MAC address
+   const topic = `${clientId}/${MAC_ADDRESS}`;
     const message = { peripheral, ...commandPayload }; // No messageId needed
 
     let isValid = true;
