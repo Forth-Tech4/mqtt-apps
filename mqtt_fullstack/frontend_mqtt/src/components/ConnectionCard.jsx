@@ -91,8 +91,8 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
     setLoading(true);
     try {
            
-           const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
-          //  const res = await fetch(`https://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {       // for live server
+          //  const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
+           const res = await fetch(`https://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {       // for live server
       
         method: 'POST',
         body: formData,

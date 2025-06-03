@@ -25,8 +25,8 @@ function useWebSocket(onDeviceUpdate) {
 
   const connectWebSocket = (host, port) => {
     setClientId('Forthtech');
-    // const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
-    const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
+    const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
+    // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
     
 
     socket.onopen = () => {
