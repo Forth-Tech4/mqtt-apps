@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { showToast } from '../utils/ToastComponent';
 
-function ControlsCard({ onPublish, clientId, deviceState, activeMac  }) {
+function ControlsCard({ onPublish, clientId, deviceState, activeMac, setMacAddress }) {
   const [panValue, setPanValue] = useState(deviceState.pan || 0);
   const [tiltValue, setTiltValue] = useState(deviceState.tilt || 0);
 
@@ -13,21 +13,35 @@ function ControlsCard({ onPublish, clientId, deviceState, activeMac  }) {
   const waterState = deviceState.water ? 'ON' : 'OFF'; // Assuming water is a simple ON/OFF like light/laser
 
   // Helper to publish a command
-  const sendCommand = (peripheral, payload) => {
+  // const sendCommand = (peripheral, payload) => {
+  //   if (!clientId) {
+  //     showToast('error', 'Not connected. Please connect first.');
+  //     return;
+  //   }
+  //   console.log(activeMac)
+
+  //   // if (!activeMac) {
+  //   //   showToast('error', 'Please select or add a device address first!');
+  //   //   return;
+  //   // }
+
+  //   onPublish(peripheral, payload);
+  // };
+
+const sendCommand = (peripheral, payload, sendToAll = false) => {
   if (!clientId) {
     showToast('error', 'Not connected. Please connect first.');
     return;
   }
-  console.log(activeMac)
 
-  if (!activeMac) {
+  if (!sendToAll && !activeMac) {
     showToast('error', 'Please select or add a device address first!');
     return;
   }
 
-  onPublish(peripheral, payload);
+  const targetMac = sendToAll ? '' : activeMac;
+  onPublish(peripheral, payload, targetMac); // ✅ This now builds correct topic
 };
-
 
   // --- Individual Peripheral Controls ---
 
@@ -44,9 +58,21 @@ function ControlsCard({ onPublish, clientId, deviceState, activeMac  }) {
   };
 
   const toggleLight = () => {
-    const newValue = lightState === 'ON' ? 0 : 1; // Toggle 0/1
-    sendCommand('light', { value: newValue });
-  };
+    if (!activeMac) {
+      showToast('error', 'Please select or add a device address first!');
+      return;
+    } else {
+
+      const newValue = lightState === 'ON' ? 0 : 1; // Toggle 0/1
+      sendCommand('light', { value: newValue });
+    };
+  }
+
+const toggleLightAll = () => {
+  const newValue = lightState === 'ON' ? 0 : 1;
+  sendCommand('light', { value: newValue }, true); // sendToAll = true
+};
+
 
   const toggleLaser = () => {
     const newValue = laserState === 'ON' ? 0 : 1; // Toggle 0/1
@@ -217,9 +243,16 @@ function ControlsCard({ onPublish, clientId, deviceState, activeMac  }) {
             className={`${clientId ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-100 cursor-not-allowed'} text-gray-800 font-medium py-2 px-4 rounded transition`}
             disabled={!clientId}
           >
-            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light 
+            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light with address
           </button>
-          
+          <button
+            onClick={toggleLightAll}
+            className={`${clientId ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-100 cursor-not-allowed'} text-gray-800 font-medium py-2 px-4 rounded transition`}
+            disabled={!clientId}
+          >
+            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light for all devices
+          </button>
+
         </div>
 
         {/* Laser Control */}

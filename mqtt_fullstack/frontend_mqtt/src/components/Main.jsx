@@ -130,6 +130,17 @@ const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') |
     // For now, I'll remove the old direct UI update, assuming `onDeviceUpdate` handles it.
   };
 
+  const handleStructuredPublish = (peripheral, payload, mac = '') => {
+  if (!isConnected) {
+    showToast('error', 'Please connect to WebSocket first!');
+    return;
+  }
+
+  const targetTopic = mac ? `Forthtech/${mac}` : `Forthtech`; // ✅ Handles both specific and "all"
+  publishCommand(peripheral, payload, targetTopic);
+};
+
+
   return (
     <div className="bg-zinc-800 font-sans p-5 min-h-screen">
       <div className="max-w-4xl mx-auto">
@@ -142,10 +153,11 @@ const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') |
           <SelectDevice onMacChange={setMacAddress} />
 
           <ControlsCard
-            onPublish={publishCommand} // Pass the new publishCommand directly
+             onPublish={handleStructuredPublish}
             clientId={clientId}
             deviceState={deviceState}
             activeMac={macAddress}
+            setMacAddress={setMacAddress} // Pass the setter to update macAddress
           />
           <PublisherCard
             onPublish={handlePublish} // This one remains for generic stringified JSON publishing

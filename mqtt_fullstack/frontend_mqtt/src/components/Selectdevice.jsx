@@ -8,17 +8,20 @@ const SelectDevice = ({ onMacChange }) => {
   const [macList, setMacList] = useState([]);
   const [activeMac, setActiveMac] = useState('');
 
-//   useEffect(() => {
-//     const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
-//     setMacList(stored);
-//     const active = localStorage.getItem(ACTIVE_KEY) || '';
-//     setActiveMac(active);
-//     if (active) {
-//       onMacChange && onMacChange(active);
-//     } else {
-//       onMacChange && onMacChange(''); // enforce empty if nothing is selected
-//     }
-//   }, []);
+useEffect(() => {
+  const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
+  setMacList(stored);
+
+  const active = localStorage.getItem(ACTIVE_KEY);
+  if (active && stored.includes(active)) {
+    setActiveMac(active);
+    onMacChange && onMacChange(active);
+  } else {
+    setActiveMac('');
+    onMacChange && onMacChange('');
+  }
+}, []);
+
 
 useEffect(() => {
   const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];

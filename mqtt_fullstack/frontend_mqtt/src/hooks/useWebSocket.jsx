@@ -171,9 +171,9 @@ function useWebSocket(onDeviceUpdate) {
       return;
     }
 
-    const MAC_ADDRESS = localStorage.getItem('activeMac') || '10:10:10:10';
+    const MAC_ADDRESS = localStorage.getItem('activeMac');
 
-    const topic = `${clientId}/${MAC_ADDRESS}`;
+    const topic = MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
     const message = { peripheral, ...commandPayload };
 
     let isValid = true;
