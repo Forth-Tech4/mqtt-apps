@@ -26,11 +26,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
 
   const toggleAccordion = () => setIsOpen(!isOpen);
 
-  // This handler is no longer needed since clientId will be hardcoded
-  // const handleClientIdChange = (e) => {
-  //   setClientIdInput(e.target.value);
-  //   setClientId(e.target.value);
-  // };
+ 
 
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -46,31 +42,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
     if (file) {
       setter(file);
       const base64 = await fileToBase64(file);
-      // Remove the certificate parsing logic for clientId extraction
-      // if (key === 'clientCert') {
-      //   const text = await file.text();
-      //   const pemBody = text
-      //     .replace(/-----BEGIN CERTIFICATE-----/, '')
-      //     .replace(/-----END CERTIFICATE-----/, '')
-      //     .replace(/\s/g, '');
-      //   const binaryDer = window.atob(pemBody);
-      //   const buffer = new ArrayBuffer(binaryDer.length);
-      //   const view = new Uint8Array(buffer);
-      //   for (let i = 0; i < binaryDer.length; i++) {
-      //     view[i] = binaryDer.charCodeAt(i);
-      //   }
-      //   const asn1 = window.asn1js.fromBER(buffer);
-      //   const cert = new window.pkijs.Certificate({ schema: asn1.result });
-
-
-      //   const cnAttr = cert.subject.typesAndValues.find(tv => tv.type === '2.5.4.3');
-      //   if (cnAttr) {
-      //     const cn = cnAttr.value.valueBlock.value;
-      //     setClientId(cn); // Auto-set clientId to match CN
-      //     setClientIdInput(cn)
-      //     showToast("info", `Detected CN from cert: ${cn}`);
-      //   }
-      // }
+   
       const metadata = {
         name: file.name,
         type: file.type,
@@ -118,8 +90,10 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
 
     setLoading(true);
     try {
-           // const res = await fetch('https://mqtt-apps-html-to-react-1-testing.onrender.com/upload-certs', {
-      const res = await fetch('http://localhost:3001/upload-certs', {
+           
+           const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
+          //  const res = await fetch(`https://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {       // for live server
+      
         method: 'POST',
         body: formData,
       });

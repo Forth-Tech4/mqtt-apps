@@ -7,8 +7,16 @@ import SubscriberCard from './SubscriberCard';
 import ReceiverCard from './ReceiverCard';
 import '../utils/fontawesome'; // Assuming this provides FontAwesome icons
 import { showToast } from '../utils/ToastComponent';
+import SelectDevice from './Selectdevice';
+
 
 const Main = () => {
+
+const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') || '');
+
+
+
+
   const [deviceState, setDeviceState] = useState({
     laser: false, // Use boolean for ON/OFF states
     light: false, // Changed 'led' to 'light', use boolean
@@ -113,7 +121,7 @@ const Main = () => {
     // This is a bridge function. For structured commands, `publishCommand` is better.
     // However, if PublisherCard needs to send arbitrary JSON, this is how.
     // It calls the `publishCommand` from the hook, which then validates and sends.
-    publishCommand(peripheral, parsedPayload); 
+    publishCommand(peripheral, parsedPayload,macAddress); 
 
     // The direct UI update logic here is largely redundant if `onDeviceUpdate`
     // correctly processes messages received from the WebSocket.
@@ -131,10 +139,13 @@ const Main = () => {
             onDisconnect={disconnectWebSocket}
             setClientId={() => {}} // This seems unused or needs clarification
           />
+          <SelectDevice onMacChange={setMacAddress} />
+
           <ControlsCard
             onPublish={publishCommand} // Pass the new publishCommand directly
             clientId={clientId}
             deviceState={deviceState}
+            activeMac={macAddress}
           />
           <PublisherCard
             onPublish={handlePublish} // This one remains for generic stringified JSON publishing

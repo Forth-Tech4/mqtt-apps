@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { showToast } from '../utils/ToastComponent';
 
-function ControlsCard({ onPublish, clientId, deviceState }) {
+function ControlsCard({ onPublish, clientId, deviceState, activeMac  }) {
   const [panValue, setPanValue] = useState(deviceState.pan || 0);
   const [tiltValue, setTiltValue] = useState(deviceState.tilt || 0);
 
@@ -14,13 +14,20 @@ function ControlsCard({ onPublish, clientId, deviceState }) {
 
   // Helper to publish a command
   const sendCommand = (peripheral, payload) => {
-    if (!clientId) {
-      showToast('error', 'Not connected. Please connect first.');
-      return;
-    }
-    // onPublish is now expected to handle the peripheral and payload directly
-    onPublish(peripheral, payload);
-  };
+  if (!clientId) {
+    showToast('error', 'Not connected. Please connect first.');
+    return;
+  }
+  console.log(activeMac)
+
+  if (!activeMac) {
+    showToast('error', 'Please select or add a device address first!');
+    return;
+  }
+
+  onPublish(peripheral, payload);
+};
+
 
   // --- Individual Peripheral Controls ---
 

@@ -25,7 +25,9 @@ function useWebSocket(onDeviceUpdate) {
 
   const connectWebSocket = (host, port) => {
     setClientId('Forthtech');
-    const socket = new WebSocket(`ws://localhost:3001`);
+    // const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
+    const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
+    
 
     socket.onopen = () => {
       console.log('WebSocket Connected');
@@ -169,7 +171,8 @@ function useWebSocket(onDeviceUpdate) {
       return;
     }
 
-    const MAC_ADDRESS = '10:10:10:10';
+    const MAC_ADDRESS = localStorage.getItem('activeMac') || '10:10:10:10';
+
     const topic = `${clientId}/${MAC_ADDRESS}`;
     const message = { peripheral, ...commandPayload };
 
