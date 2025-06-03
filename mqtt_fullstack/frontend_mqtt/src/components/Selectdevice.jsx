@@ -8,30 +8,28 @@ const SelectDevice = ({ onMacChange }) => {
   const [macList, setMacList] = useState([]);
   const [activeMac, setActiveMac] = useState('');
 
-useEffect(() => {
-  const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
-  setMacList(stored);
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
+    setMacList(stored);
 
-  const active = localStorage.getItem(ACTIVE_KEY);
-  if (active && stored.includes(active)) {
-    setActiveMac(active);
-    onMacChange && onMacChange(active);
-  } else {
+    const active = localStorage.getItem(ACTIVE_KEY);
+    if (active && stored.includes(active)) {
+      setActiveMac(active);
+      onMacChange && onMacChange(active);
+    } else {
+      setActiveMac('');
+      onMacChange && onMacChange('');
+    }
+  }, []);
+
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
+    setMacList(stored);
     setActiveMac('');
+    localStorage.removeItem(ACTIVE_KEY);
+
     onMacChange && onMacChange('');
-  }
-}, []);
-
-
-useEffect(() => {
-  const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
-  setMacList(stored);
-  setActiveMac('');
-  localStorage.removeItem(ACTIVE_KEY);
-
-  onMacChange && onMacChange('');
-}, []);
-
+  }, []);
 
   const addMac = () => {
     const trimmed = macInput.trim();
@@ -59,10 +57,19 @@ useEffect(() => {
   };
 
   const selectMac = (mac) => {
+  if (mac === activeMac) {
+    // Unselect if already selected
+    setActiveMac('');
+    localStorage.removeItem(ACTIVE_KEY);
+    onMacChange('');
+  } else {
+    // Select the new one
     setActiveMac(mac);
     localStorage.setItem(ACTIVE_KEY, mac);
     onMacChange(mac);
-  };
+  }
+};
+
 
   return (
     <div className="bg-white p-5 rounded-md shadow-md w-full  mx-auto mb-4">
@@ -97,8 +104,8 @@ useEffect(() => {
             className={`flex items-center justify-between px-4 py-2 border rounded ${mac === activeMac ? 'bg-green-100 border-green-300' : 'bg-gray-50 border-gray-200'}`}
           >
             <span
-              onClick={() => selectMac(mac)}
-              className={`cursor-pointer font-mono text-sm ${mac === activeMac ? 'text-green-700 font-bold' : 'text-gray-700'}`}
+               onClick={() => selectMac(mac)} 
+              className={`cursor-pointer w-full font-mono text-sm ${mac === activeMac ? 'text-green-700 font-bold' : 'text-gray-700'}`}
             >
               {mac}
             </span>
@@ -112,11 +119,7 @@ useEffect(() => {
         ))}
       </ul>
 
-      {!activeMac && macList.length > 0 && (
-        <div className="mt-4 text-sm text-red-600 font-semibold">
-          ⚠️ Please select a device address to proceed.
-        </div>
-      )}
+     
 
       {activeMac && (
         <div className="mt-4 text-sm text-green-700">

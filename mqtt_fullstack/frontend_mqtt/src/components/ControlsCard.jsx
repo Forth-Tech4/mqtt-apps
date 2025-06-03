@@ -4,74 +4,76 @@ import { showToast } from '../utils/ToastComponent';
 function ControlsCard({ onPublish, clientId, deviceState, activeMac, setMacAddress }) {
   const [panValue, setPanValue] = useState(deviceState.pan || 0);
   const [tiltValue, setTiltValue] = useState(deviceState.tilt || 0);
+  
 
   const TOPIC_PREFIX = clientId || 'unknown';
 
   const laserState = deviceState.laser ? 'ON' : 'OFF';
   const lightState = deviceState.light ? 'ON' : 'OFF';
+  
   const buzzerState = deviceState.buzzer || 'off'; // Use the actual mode as state
   const waterState = deviceState.water ? 'ON' : 'OFF'; // Assuming water is a simple ON/OFF like light/laser
 
   // Helper to publish a command
-  // const sendCommand = (peripheral, payload) => {
-  //   if (!clientId) {
-  //     showToast('error', 'Not connected. Please connect first.');
-  //     return;
-  //   }
-  //   console.log(activeMac)
+  const sendCommand = (peripheral, payload) => {
+    if (!clientId) {
+      showToast('error', 'Not connected. Please connect first.');
+      return;
+    }
+    console.log(activeMac)
 
-  //   // if (!activeMac) {
-  //   //   showToast('error', 'Please select or add a device address first!');
-  //   //   return;
-  //   // }
+    // if (!activeMac) {
+    //   showToast('error', 'Please select or add a device address first!');
+    //   return;
+    // }
 
-  //   onPublish(peripheral, payload);
-  // };
+    onPublish(peripheral, payload);
+  };
 
-const sendCommand = (peripheral, payload, sendToAll = false) => {
-  if (!clientId) {
-    showToast('error', 'Not connected. Please connect first.');
-    return;
-  }
+// const sendCommand = (peripheral, payload, sendToAll = false) => {
+//   if (!clientId) {
+//     showToast('error', 'Not connected. Please connect first.');
+//     return;
+//   }
 
-  if (!sendToAll && !activeMac) {
-    showToast('error', 'Please select or add a device address first!');
-    return;
-  }
+//   if (!sendToAll && !activeMac) {
+//     showToast('error', 'Please select or add a device address first!');
+//     return;
+//   }
 
-  const targetMac = sendToAll ? '' : activeMac;
-  onPublish(peripheral, payload, targetMac); // ✅ This now builds correct topic
-};
+//   const targetMac = sendToAll ? '' : activeMac;
+//   onPublish(peripheral, payload, targetMac); // ✅ This now builds correct topic
+// };
 
   // --- Individual Peripheral Controls ---
 
   const handlePanChange = (e) => {
     const value = Number(e.target.value);
     setPanValue(value);
-    sendCommand('pan', { value });
+    // sendCommand('pan', { value });
   };
 
   const handleTiltChange = (e) => {
     const value = Number(e.target.value);
     setTiltValue(value);
-    sendCommand('tilt', { value });
+    // sendCommand('tilt', { value });
   };
 
   const toggleLight = () => {
-    if (!activeMac) {
-      showToast('error', 'Please select or add a device address first!');
-      return;
-    } else {
+    // if (!activeMac) {
+    //   showToast('error', 'Please select or add a device address first!');
+    //   return;
+    // } else {
 
       const newValue = lightState === 'ON' ? 0 : 1; // Toggle 0/1
       sendCommand('light', { value: newValue });
-    };
+    // };
   }
 
-const toggleLightAll = () => {
-  const newValue = lightState === 'ON' ? 0 : 1;
-  sendCommand('light', { value: newValue }, true); // sendToAll = true
-};
+// const toggleLightAll = () => {
+//   const newValue = lightState === 'ON' ? 0 : 1;
+//   sendCommand('light', { value: newValue }, true); // sendToAll = true
+// };
 
 
   const toggleLaser = () => {
@@ -243,15 +245,15 @@ const toggleLightAll = () => {
             className={`${clientId ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-100 cursor-not-allowed'} text-gray-800 font-medium py-2 px-4 rounded transition`}
             disabled={!clientId}
           >
-            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light with address
+            Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light
           </button>
-          <button
+          {/* <button
             onClick={toggleLightAll}
             className={`${clientId ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-100 cursor-not-allowed'} text-gray-800 font-medium py-2 px-4 rounded transition`}
             disabled={!clientId}
           >
             Turn {lightState === 'ON' ? 'OFF' : 'ON'} Light for all devices
-          </button>
+          </button> */}
 
         </div>
 

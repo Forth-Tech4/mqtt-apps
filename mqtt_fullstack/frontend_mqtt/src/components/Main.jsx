@@ -20,6 +20,7 @@ const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') |
   const [deviceState, setDeviceState] = useState({
     laser: false, // Use boolean for ON/OFF states
     light: false, // Changed 'led' to 'light', use boolean
+    
     buzzer: 'off', // Use string for buzzer modes
     water: false, // Use boolean for ON/OFF states
     pan: 0,
