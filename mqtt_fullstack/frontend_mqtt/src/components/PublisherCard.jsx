@@ -8,7 +8,7 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
   const [message, setMessage] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
- 
+
 
   const toggleAccordion = () => setIsOpen(!isOpen);
 
@@ -33,9 +33,11 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
       return;
     }
 
-    // const fullTopic = `${clientId}/${topicSuffix.trim().replace(/^\/+/, '')}`;
     const sender = 'web';
-    const fullTopic = `${clientId}/${topicSuffix.trim().replace(/^\/+/, '')}/${sender}`;
+
+    const topicCore = topicSuffix.trim().replace(/^\/+/, '');
+const fullTopic = topicCore ? `${clientId}/${topicCore}/${sender}` : `${clientId}/${sender}`;
+
 
 
     if (!fullTopic.startsWith(`${clientId}/`)) {
@@ -46,7 +48,7 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
     onPublish(fullTopic, message);
     // showToast('success', `Published to topic: ${fullTopic}`);
     const cleanTopic = fullTopic.endsWith('/web') ? fullTopic.slice(0, -4) : fullTopic;
-showToast('success', `Published to topic: ${cleanTopic}`);
+    showToast('success', `Published to topic: ${cleanTopic}`);
 
     setMessage(''); // keep topicSuffix for repeat sends
   };
@@ -87,10 +89,10 @@ showToast('success', `Published to topic: ${cleanTopic}`);
 
                 //   if (input === '' || macRegex.test(input)) {
                 //     setTopicSuffix(input);
-                    
+
                 //   } else {
                 //     // showToast('error', `Invalid MAC address. Use format: XX:XX:XX:XX:XX:XX `);
-                    
+
                 //   }
                 // }}
 
