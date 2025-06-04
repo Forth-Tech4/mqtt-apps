@@ -42,7 +42,7 @@ function ControlsCard({ onPublish, clientId, deviceState, activeMac, setMacAddre
 //   }
 
 //   const targetMac = sendToAll ? '' : activeMac;
-//   onPublish(peripheral, payload, targetMac); // ✅ This now builds correct topic
+//   onPublish(peripheral, payload, targetMac); // 
 // };
 
   // --- Individual Peripheral Controls ---
@@ -60,14 +60,11 @@ function ControlsCard({ onPublish, clientId, deviceState, activeMac, setMacAddre
   };
 
   const toggleLight = () => {
-    // if (!activeMac) {
-    //   showToast('error', 'Please select or add a device address first!');
-    //   return;
-    // } else {
+    
 
       const newValue = lightState === 'ON' ? 0 : 1; // Toggle 0/1
       sendCommand('light', { value: newValue });
-    // };
+    
   }
 
 // const toggleLightAll = () => {

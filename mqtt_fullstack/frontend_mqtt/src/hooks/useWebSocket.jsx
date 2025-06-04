@@ -23,11 +23,47 @@ function useWebSocket(onDeviceUpdate) {
     });
   };
 
+  const publishToTopic = (topic, message) => {
+    if (!isConnected) {
+      showToast('error', 'WebSocket not connected. Cannot publish message.');
+      return;
+    }
+
+    try {
+      const parsedMessage = JSON.parse(message);
+      const messageToSend = JSON.stringify({ action: 'publish', topic, message });
+
+      console.log('⬆️ SENT to server (Publish - Manual):', {
+        topic,
+        parsedMessage,
+      });
+
+      ws.send(messageToSend);
+
+      if (checkIfTopicIsSubscribed(topic)) {
+        setMessages(prev => [
+          ...prev,
+          {
+            topic,
+            message: parsedMessage,
+            timestamp: Date.now(),
+            local: true,
+          },
+        ]);
+      }
+
+      showToast('success', `Published to ${topic}`);
+    } catch (err) {
+      showToast('error', 'Message must be a valid JSON string.');
+      console.error('Invalid JSON for message:', err);
+    }
+  };
+
   const connectWebSocket = (host, port) => {
-    setClientId('Forthtech');
+    // setClientId('Forthtech');
+  
     const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
     // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
-    
 
     socket.onopen = () => {
       console.log('WebSocket Connected');
@@ -46,9 +82,7 @@ function useWebSocket(onDeviceUpdate) {
           if (typeof message === 'string') {
             try {
               parsedMessage = JSON.parse(message);
-            } catch (err) {
-              // Not a JSON string
-            }
+            } catch (err) {}
           }
 
           const peripheralFromMessage = parsedMessage?.peripheral;
@@ -166,18 +200,26 @@ function useWebSocket(onDeviceUpdate) {
   };
 
   const publishCommand = (peripheral, commandPayload) => {
-    if (!isConnected) {
-      showToast('error', 'WebSocket not connected. Cannot send command.');
-      return;
-    }
+  if (!isConnected) {
+    showToast('error', 'WebSocket not connected. Cannot send command.');
+    return;
+  }
 
-    const MAC_ADDRESS = localStorage.getItem('activeMac');
+  const MAC_ADDRESS = localStorage.getItem('activeMac');
+  let topic = '';
 
-    const topic = MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
-    const message = { peripheral, ...commandPayload };
+  // Check if 'peripheral' ends with 'web' and handle it
+  if (peripheral.endsWith('web')) {
+    const trimmedPeripheral = peripheral.slice(0, -3).replace(/\/+$/, ''); // remove 'web' and any trailing slash
+    topic = `${clientId}/${trimmedPeripheral}`;
+  } else {
+    topic = MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
+  }
 
-    let isValid = true;
-    let errorMessage = '';
+  const message = { peripheral, ...commandPayload };
+
+  let isValid = true;
+  let errorMessage = '';
 
     switch (peripheral) {
       case 'pan':
@@ -209,9 +251,9 @@ function useWebSocket(onDeviceUpdate) {
           isValid = false;
           errorMessage = `${peripheral} value must be 0 or 1.`;
         }
-        if (typeof message.value === 'number') {
-          message.value = Boolean(message.value);
-        }
+       if (typeof message.value === 'boolean') {
+  message.value = message.value ? 1 : 0;
+}
         break;
       default:
         if (!peripheral) {
@@ -248,7 +290,7 @@ function useWebSocket(onDeviceUpdate) {
     setSubscribedTopics([]);
     subscribedTopicsRef.current = [];
     setMessages([]);
-    showToast('info', 'Disconnected from WebSocket.');
+    // showToast('info', 'Disconnected from WebSocket.');
   };
 
   const clearMessages = () => {
@@ -267,6 +309,7 @@ function useWebSocket(onDeviceUpdate) {
     connectWebSocket,
     subscribeTopic,
     publishCommand,
+    publishToTopic,
     disconnectWebSocket,
     clearMessages,
   };

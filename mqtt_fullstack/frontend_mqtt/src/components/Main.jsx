@@ -98,6 +98,8 @@ const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') |
   // This handlePublish is for generic publishing (e.g., from PublisherCard)
   // It now expects topic and a stringified JSON message.
   const handlePublish = (topic, stringifiedPayload) => {
+    console.log("topic---------->",topic)
+    console.log("stringifiedPayload---------->",stringifiedPayload)
     if (!isConnected) {
       showToast('error', 'Please connect to WebSocket first!');
       return;
@@ -117,12 +119,14 @@ const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') |
     }
 
     // Determine peripheral from parsedPayload or topic
-    const peripheral = topic.split('/')[1] || "non-found";
+    const peripheral = topic.split('/')[1] + topic.split('/')[2] || "non-found";
 
     // This is a bridge function. For structured commands, `publishCommand` is better.
     // However, if PublisherCard needs to send arbitrary JSON, this is how.
     // It calls the `publishCommand` from the hook, which then validates and sends.
     publishCommand(peripheral, parsedPayload,macAddress); 
+
+    handleDeviceUpdate(peripheral, parsedPayload);
 
     // The direct UI update logic here is largely redundant if `onDeviceUpdate`
     // correctly processes messages received from the WebSocket.
@@ -139,6 +143,8 @@ const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') |
 
   const targetTopic = mac ? `Forthtech/${mac}` : `Forthtech`; // ✅ Handles both specific and "all"
   publishCommand(peripheral, payload, targetTopic);
+
+  handleDeviceUpdate(peripheral, payload);
 };
 
 

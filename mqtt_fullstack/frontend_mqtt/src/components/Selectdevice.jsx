@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { showToast } from '../utils/ToastComponent'; // adjust path if needed
+
 
 const LOCAL_KEY = 'savedMacAddresses';
 const ACTIVE_KEY = 'activeMac';
@@ -22,14 +24,7 @@ const SelectDevice = ({ onMacChange }) => {
     }
   }, []);
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
-    setMacList(stored);
-    setActiveMac('');
-    localStorage.removeItem(ACTIVE_KEY);
 
-    onMacChange && onMacChange('');
-  }, []);
 
   const addMac = () => {
     const trimmed = macInput.trim();
@@ -45,6 +40,27 @@ const SelectDevice = ({ onMacChange }) => {
     setMacInput('');
   };
 
+  // const addMac = () => {
+  //   const trimmed = macInput.trim().toUpperCase();
+  //   const macRegex = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
+
+  //   if (!macRegex.test(trimmed)) {
+  //     showToast('error', 'Invalid MAC address. Use format: XX:XX:XX:XX:XX:XX');
+  //     return;
+  //   }
+
+  //   if (!macList.includes(trimmed)) {
+  //     const updated = [...macList, trimmed];
+  //     setMacList(updated);
+  //     localStorage.setItem(LOCAL_KEY, JSON.stringify(updated));
+  //     setActiveMac(trimmed);
+  //     localStorage.setItem(ACTIVE_KEY, trimmed);
+  //     onMacChange(trimmed);
+  //   }
+  //   setMacInput('');
+  // };
+
+
   const deleteMac = (mac) => {
     const filtered = macList.filter(item => item !== mac);
     setMacList(filtered);
@@ -57,18 +73,18 @@ const SelectDevice = ({ onMacChange }) => {
   };
 
   const selectMac = (mac) => {
-  if (mac === activeMac) {
-    // Unselect if already selected
-    setActiveMac('');
-    localStorage.removeItem(ACTIVE_KEY);
-    onMacChange('');
-  } else {
-    // Select the new one
-    setActiveMac(mac);
-    localStorage.setItem(ACTIVE_KEY, mac);
-    onMacChange(mac);
-  }
-};
+    if (mac === activeMac) {
+      // Unselect if already selected
+      setActiveMac('');
+      localStorage.removeItem(ACTIVE_KEY);
+      onMacChange('');
+    } else {
+      // Select the new one
+      setActiveMac(mac);
+      localStorage.setItem(ACTIVE_KEY, mac);
+      onMacChange(mac);
+    }
+  };
 
 
   return (
@@ -91,11 +107,11 @@ const SelectDevice = ({ onMacChange }) => {
         </button>
       </div>
 
-      {macList.length === 0 && (
+      {/* {macList.length === 0 && (
         <div className="text-sm text-red-500 mb-2">
           Please add and select a MAC address to continue.
         </div>
-      )}
+      )} */}
 
       <ul className="space-y-2">
         {macList.map((mac, idx) => (
@@ -104,7 +120,7 @@ const SelectDevice = ({ onMacChange }) => {
             className={`flex items-center justify-between px-4 py-2 border rounded ${mac === activeMac ? 'bg-green-100 border-green-300' : 'bg-gray-50 border-gray-200'}`}
           >
             <span
-               onClick={() => selectMac(mac)} 
+              onClick={() => selectMac(mac)}
               className={`cursor-pointer w-full font-mono text-sm ${mac === activeMac ? 'text-green-700 font-bold' : 'text-gray-700'}`}
             >
               {mac}
@@ -119,7 +135,7 @@ const SelectDevice = ({ onMacChange }) => {
         ))}
       </ul>
 
-     
+
 
       {activeMac && (
         <div className="mt-4 text-sm text-green-700">

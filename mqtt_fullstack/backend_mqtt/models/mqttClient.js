@@ -7,7 +7,7 @@ let lastCertError = false;
 
 const DEFAULT_MQTT_SUBSCRIPTION_TOPIC = 'Forthtech/#';
 
-function connectWithCerts({ hostname, port, keyPath, certPath, caPath }, onConnect, onError, onMessage) {
+function connectWithCerts({ hostname, port, keyPath, certPath, caPath, clientId }, onConnect, onError, onMessage, ) {
     // If an existing client exists, end it clean before creating a new one
     if (mqttClient) {
         console.log('MQTT: Ending existing MQTT client connection.');
@@ -33,9 +33,9 @@ function connectWithCerts({ hostname, port, keyPath, certPath, caPath }, onConne
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certPath),
         ca: fs.readFileSync(caPath),
+        clientId: `${clientId}`,
         rejectUnauthorized: true,
         reconnectPeriod: 0,
-        clientId: 'Forthtech-Backend',
     });
 
     mqttClient.on('connect', () => {

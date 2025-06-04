@@ -87,11 +87,12 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
     formData.append('clientKey', clientKey);
     formData.append('clientCert', clientCert);
     formData.append('caCert', caCert);
+    formData.append('clientId', clientIdInput);
 
     setLoading(true);
     try {
            
-          //  const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
+     //  const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
            const res = await fetch(`https://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {       // for live server
       
         method: 'POST',

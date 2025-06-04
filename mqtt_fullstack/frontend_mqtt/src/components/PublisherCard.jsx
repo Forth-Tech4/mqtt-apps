@@ -8,6 +8,8 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
   const [message, setMessage] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
+ 
+
   const toggleAccordion = () => setIsOpen(!isOpen);
 
   const handlePublish = () => {
@@ -21,17 +23,20 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
       return;
     }
 
-    if (!topicSuffix.trim()) {
-      showToast('error', 'Please enter a topic.');
-      return;
-    }
+    // if (!topicSuffix.trim()) {
+    //   showToast('error', 'Please enter a topic.');
+    //   return;
+    // }
 
     if (!message.trim()) {
       showToast('error', 'Please enter a message.');
       return;
     }
 
-    const fullTopic = `${clientId}/${topicSuffix.trim().replace(/^\/+/, '')}`;
+    // const fullTopic = `${clientId}/${topicSuffix.trim().replace(/^\/+/, '')}`;
+    const sender = 'web';
+    const fullTopic = `${clientId}/${topicSuffix.trim().replace(/^\/+/, '')}/${sender}`;
+
 
     if (!fullTopic.startsWith(`${clientId}/`)) {
       showToast('error', `You can only publish to topics starting with '${clientId}/'`);
@@ -39,7 +44,10 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
     }
 
     onPublish(fullTopic, message);
-    showToast('success', `Published to topic: ${fullTopic}`);
+    // showToast('success', `Published to topic: ${fullTopic}`);
+    const cleanTopic = fullTopic.endsWith('/web') ? fullTopic.slice(0, -4) : fullTopic;
+showToast('success', `Published to topic: ${cleanTopic}`);
+
     setMessage(''); // keep topicSuffix for repeat sends
   };
 
@@ -73,6 +81,19 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
                 className={`w-full py-2 px-3 text-gray-700 border ${clientId ? "border-l-0 rounded-r" : "rounded"}`}
                 value={topicSuffix}
                 onChange={(e) => setTopicSuffix(e.target.value.replace(/^\/+/, ''))}
+                // onChange={(e) => {
+                //   const input = e.target.value.trim();
+                //   const macRegex = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
+
+                //   if (input === '' || macRegex.test(input)) {
+                //     setTopicSuffix(input);
+                    
+                //   } else {
+                //     // showToast('error', `Invalid MAC address. Use format: XX:XX:XX:XX:XX:XX `);
+                    
+                //   }
+                // }}
+
                 disabled={!clientId}
               />
             </div>

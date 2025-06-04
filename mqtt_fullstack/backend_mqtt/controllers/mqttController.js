@@ -4,7 +4,7 @@ const fs = require('fs');
 const forge = require('node-forge');
 
 exports.uploadCerts = (req, res) => {
-    const { hostname, port } = req.body;
+    const { hostname, port ,clientId} = req.body;
     const files = req.files;
 
     console.log('CertificateController: UploadCerts initiated.');
@@ -39,7 +39,7 @@ exports.uploadCerts = (req, res) => {
 
     // Call connectWithCerts from the mqttClient module
     connectWithCerts(
-        { hostname, port: parseInt(port), keyPath, certPath, caPath }, // Ensure port is an integer
+        { hostname, port: parseInt(port), keyPath, certPath, caPath, clientId }, // Ensure port is an integer
         () => {
             console.log('CertificateController: MQTT client connection callback success.');
             // Send back a success status. CN is optional now that it's hardcoded on frontend.
