@@ -8,7 +8,7 @@ export default function MacChecker() {
 
   const handleMacCheck = async () => {
     try {
-      const res = await axios.post("http://localhost:3001/api/mac/check", { macaddress: mac });
+      const res = await axios.post("http://192.168.1.17:3001/api/mac/check", { macaddress: mac });
       if (res.data.status === "OX003") {
         alert("MAC is valid and unconfigured. Redirecting...");
         navigate(`/config?mac=${mac}`);

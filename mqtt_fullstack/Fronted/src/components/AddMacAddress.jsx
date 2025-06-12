@@ -8,7 +8,7 @@ export default function AddMacAddress() {
     if (!macToAdd) return alert("Enter a MAC address");
 
     try {
-      const res = await axios.post("http://localhost:3001/api/mac/add", { macaddress: macToAdd });
+      const res = await axios.post("http://192.168.1.17:3001/api/mac/add", { macaddress: macToAdd });
       if (res.data.status === "OX005") {
         alert("MAC added successfully.");
         setMacToAdd("");
