@@ -1,31 +1,39 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate, Link } from "react-router-dom";
 
-export default function RegisterForm({ onSuccess }) {
+export default function RegisterForm() {
   const [form, setForm] = useState({
-    fullname: "", email: "", mobile: "", common_name: "", password: ""
+    fullname: "", email: "", mobile: "", common_name: "", password: "", rememberMe: false,
   });
+
+  const navigate = useNavigate();
 
   const handleRegister = async () => {
     try {
-  const res = await axios.post("http://192.168.1.17:3001/api/register", form);
-  if (res.data.status === "OX001") {
-    alert(res.data.message);
-    onSuccess();
-  } else {
-    alert("Unexpected: " + res.data.message + " (" + res.data.status + ")");
-  }
-} catch (err) {
-  const status = err.response?.data?.status;
-  const message = err.response?.data?.message;
+      const { rememberMe, ...formData } = form;
+      const res = await axios.post("http://192.168.1.17:3001/api/register", formData);
+      if (res.data.status === "OX001") {
+        alert("Registration successful!");
 
-  if (status === "ERX002") {
-    alert("Duplicate email or username. Please try another.");
-  } else {
-    alert("Error: " + message + " (" + status + ")");
-  }
-}
+        if (rememberMe) {
+          localStorage.setItem("rememberedUser", JSON.stringify({ email: form.email }));
+        }
 
+        navigate("/login");
+      } else {
+        alert("Unexpected: " + res.data.message + " (" + res.data.status + ")");
+      }
+    } catch (err) {
+      const status = err.response?.data?.status;
+      const message = err.response?.data?.message;
+
+      if (status === "ERX002") {
+        alert("Duplicate email or username. Please try another.");
+      } else {
+        alert("Error: " + message + " (" + status + ")");
+      }
+    }
   };
 
   return (
@@ -40,8 +48,7 @@ export default function RegisterForm({ onSuccess }) {
         }}
         className="space-y-4"
       >
-        {[
-          { key: "fullname", label: "Full Name", type: "text" },
+        {[{ key: "fullname", label: "Full Name", type: "text" },
           { key: "email", label: "Email Address", type: "email" },
           { key: "mobile", label: "Mobile Number", type: "tel" },
           { key: "common_name", label: "Username", type: "text" },
@@ -63,6 +70,9 @@ export default function RegisterForm({ onSuccess }) {
             />
           </div>
         ))}
+
+
+
         <button
           type="submit"
           className="bg-blue-600 hover:bg-blue-700 transition text-white w-full py-2 rounded-lg font-semibold shadow mt-4"
@@ -70,6 +80,14 @@ export default function RegisterForm({ onSuccess }) {
           Register
         </button>
       </form>
+
+      {/* ✅ Login Link */}
+      <p className="mt-4 text-center text-sm text-blue-700">
+        Already registered?{" "}
+        <Link to="/login" className="text-blue-900 font-semibold hover:underline">
+          Login here
+        </Link>
+      </p>
     </div>
   );
 }

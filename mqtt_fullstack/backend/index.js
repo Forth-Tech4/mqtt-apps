@@ -5,11 +5,13 @@ const app = express();
 const supabase = require('./supabaseClient');
 const registerRoutes = require('./routes/register');
 const macRoutes = require('./routes/mac');
+const loginRoutes = require('./routes/login');
 
 app.use(cors());
 app.use(express.json());
 
 app.use("/api/register", registerRoutes);
+app.use("/api/login", loginRoutes);
 app.use("/api/mac", macRoutes);
 
 app.use((err, req, res, next) => {
