@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../supabaseClient');
 
-// ✅ Check MAC status
+// Check MAC status
 router.post('/check', async (req, res) => {
   const { macaddress } = req.body;
 
@@ -27,7 +27,7 @@ router.post('/check', async (req, res) => {
   res.status(200).json({ status: "OX003", message: "MAC unconfigured", data });
 });
 
-// ✅ Add MAC (if needed for testing)
+//  Add MAC (if needed for testing)
 router.post('/add', async (req, res) => {
   const { macaddress, user_id } = req.body;
 
@@ -56,7 +56,7 @@ router.post('/add', async (req, res) => {
   res.status(200).json({ status: "OX004", message: "MAC added", data });
 });
 
-// ✅ Assign MAC to user and save QR SSID/PASS
+//  Assign MAC to user and save QR SSID/PASS
 router.post('/assign-user', async (req, res) => {
   const { macaddress, user_id, ssid, pass } = req.body;
 
@@ -86,7 +86,7 @@ router.post('/assign-user', async (req, res) => {
   res.status(200).json({ success: true, message: "MAC assigned", status: existing.status });
 });
 
-// ✅ Get all MACs for user
+//  Get all MACs for user
 router.post('/by-user', async (req, res) => {
   const { user_id } = req.body;
 
@@ -104,7 +104,7 @@ router.post('/by-user', async (req, res) => {
   res.status(200).json({ status: "OX010", devices: data });
 });
 
-// ✅ Update MAC config status
+//  Update MAC config status
 router.post('/update-status', async (req, res) => {
   const { macaddress, status } = req.body;
 

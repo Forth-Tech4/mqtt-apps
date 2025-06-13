@@ -29,7 +29,7 @@ export default function LoginForm() {
                 }
 
                 localStorage.setItem("userSession", JSON.stringify(res.data.user));
-                console.log("//////////////", res.data.user);
+                // console.log("//////////////", res.data.user);
                 navigate("/dashboard");
             } else {
                 alert("Unexpected: " + res.data.message);

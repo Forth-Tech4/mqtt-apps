@@ -15,5 +15,5 @@ export default function HomeRedirect() {
     }
   }, [navigate]);
 
-  return null; // No visible UI
+  return null; 
 }

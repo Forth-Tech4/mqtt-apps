@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../supabaseClient');
 
-// 🔐 Register User
+//  Register User
 router.post('/register', async (req, res) => {
   const { fullname, email, mobile, common_name, password } = req.body;
 
@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
   });
 });
 
-// 🔑 Login User
+//  Login User
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
