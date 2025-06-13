@@ -33,24 +33,31 @@ export default function ScannerModal({ onClose, onScanSuccess }) {
                     cameraId,
                     { fps: 10, qrbox: 250 },
                     (decodedText) => {
-                        try {
-                            const data = JSON.parse(decodedText);
-                            if (data.mac && data.ssid && data.pass) {
-                                onScanSuccess(data);
-                                qrScanner.stop().then(() => {
-                                    qrScanner.clear();
+                        (async () => {
+                            try {
+                                const data = JSON.parse(decodedText);
+                                if (data.mac && data.ssid && data.pass && data.cnname) {
+                                    onScanSuccess(data);
+
+                                    // ✅ Proper stop
+                                    await qrScanner.stop();
+                                    await qrScanner.clear();
                                     scannerRef.current = null;
-                                    onClose(); // Close the modal
-                                });
-                            } else {
-                                alert("Invalid QR format");
+
+                                    // ✅ Only after camera fully stops
+                                    onClose();
+                                } else {
+                                    alert("Invalid QR format");
+                                }
+                            } catch {
+                                alert("Invalid information in QR");
                             }
-                        } catch {
-                            alert("Invalid information in QR");
-                        }
+                        })();
                     },
                     () => { }
                 );
+
+
             } catch (err) {
                 alert("Camera error: " + err.message);
                 onClose();
@@ -67,10 +74,11 @@ export default function ScannerModal({ onClose, onScanSuccess }) {
                     .then(() => scannerRef.current.clear())
                     .catch(() => { })
                     .finally(() => {
-                        scannerRef.current = null; // ✅ make sure ref is cleared
+                        scannerRef.current = null;
                     });
             }
         };
+
     }, [onClose, onScanSuccess]);
 
     return (

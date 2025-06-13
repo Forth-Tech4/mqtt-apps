@@ -58,49 +58,58 @@ export default function Dashboard() {
   };
 
   const handleNewScan = async (device) => {
-    const session = JSON.parse(localStorage.getItem("userSession"));
-    const userId = session?.id;
-    if (!userId) return;
+  const session = JSON.parse(localStorage.getItem("userSession"));
+  const userId = session?.id;
+  const loggedInCN = session?.common_name;
 
-    const isValid = await validateMac(device.mac);
-    if (!isValid) return;
+  if (!userId) return;
 
-    const alreadyShown = scannedList.find((d) => d.macaddress === device.mac);
-    if (alreadyShown) {
-      alert("Device already in dashboard");
-      return;
+  const isValid = await validateMac(device.mac);
+  if (!isValid) return;
+
+ console.log("///////", device.cnname, loggedInCN);
+
+if (device.cnname.trim().toLowerCase() !== loggedInCN.trim().toLowerCase()) {
+  return alert("This device does not belong to your account (CN mismatch)");
+}
+
+
+  const alreadyShown = scannedList.find((d) => d.macaddress === device.mac);
+  if (alreadyShown) {
+    alert("Device already in dashboard");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://localhost:3001/api/mac/assign-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        macaddress: device.mac,
+        user_id: userId,
+        ssid: device.ssid,
+        pass: device.pass
+      })
+    });
+
+    const result = await res.json();
+    if (result.success) {
+      const enriched = {
+        macaddress: device.mac,
+        qr_ssid: device.ssid,
+        qr_pass: device.pass,
+        status: result.status || "unconfig",
+        ftp_path: result.ftp_path // 🔽 optional if backend returns this
+      };
+      setScannedList(prev => [...prev, enriched]);
+    } else {
+      alert(result.message);
     }
+  } catch (err) {
+    alert("Failed to assign MAC");
+  }
+};
 
-    try {
-      const res = await fetch("http://localhost:3001/api/mac/assign-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          macaddress: device.mac,
-          user_id: userId,
-          ssid: device.ssid,
-          pass: device.pass,
-        }),
-      });
-
-      const result = await res.json();
-      if (result.success) {
-        setScannedList((prev) => [
-          ...prev,
-          {
-            macaddress: device.mac,
-            qr_ssid: device.ssid,
-            qr_pass: device.pass,
-            status: result.status || "unconfig",
-          },
-        ]);
-      } else {
-        alert(result.message);
-      }
-    } catch (err) {
-      alert("Failed to assign MAC");
-    }
-  };
 
   const handleStatusUpdate = (mac, newStatus) => {
     const updated = scannedList.map((d) =>
@@ -132,7 +141,8 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+
           {scannedList.map((device) => (
             <MacCard
               key={device.macaddress}
