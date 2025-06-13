@@ -18,7 +18,7 @@ export default function LoginForm() {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post("http://192.168.1.17:3001/api/login", {
+            const res = await axios.post("http://localhost:3001/api/login", {
                 email,
                 password,
             });
@@ -29,6 +29,7 @@ export default function LoginForm() {
                 }
 
                 localStorage.setItem("userSession", JSON.stringify(res.data.user));
+                console.log("//////////////", res.data.user);
                 navigate("/dashboard");
             } else {
                 alert("Unexpected: " + res.data.message);

@@ -12,7 +12,7 @@ export default function RegisterForm() {
   const handleRegister = async () => {
     try {
       const { rememberMe, ...formData } = form;
-      const res = await axios.post("http://192.168.1.17:3001/api/register", formData);
+      const res = await axios.post("http://localhost:3001/api/register", formData);
       if (res.data.status === "OX001") {
         alert("Registration successful!");
 

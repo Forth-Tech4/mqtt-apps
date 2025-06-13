@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function ConfigForm({ device, onSubmit, onCancel }) {
   const [form, setForm] = useState({
@@ -8,23 +8,44 @@ export default function ConfigForm({ device, onSubmit, onCancel }) {
     ftp: ""
   });
 
+  
+  useEffect(() => {
+    const session = JSON.parse(localStorage.getItem("userSession"));
+    if (session?.common_name) {
+      setForm((prev) => ({ ...prev, cn: session.common_name }));
+    }
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.wifiId || !form.wifiPass || !form.cn || !form.ftp) {
       return alert("All fields are required");
     }
 
-    onSubmit(form);
+    try {
+      await fetch("http://localhost:3001/api/mac/update-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          macaddress: device.macaddress,
+          status: "config"
+        })
+      });
+
+      onSubmit(form); // Updates state + localStorage
+    } catch (err) {
+      alert("Failed to update status");
+    }
   };
 
   return (
     <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-      <h3 className="text-md font-bold mb-2 text-blue-800">Configure {device.mac}</h3>
+      <h3 className="text-md font-bold mb-2 text-blue-800">Configure {device.macaddress}</h3>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input

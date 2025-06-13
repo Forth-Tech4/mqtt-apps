@@ -1,4 +1,4 @@
-// Updated Dashboard.jsx
+// src/components/Dashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera } from "lucide-react";
@@ -12,48 +12,100 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem("userSession");
-    localStorage.removeItem("rememberedUser");
     alert("You have been logged out.");
     navigate("/login");
   };
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("scannedDevices")) || [];
-    setScannedList(saved);
-  }, []);
+  const fetchDevices = async () => {
+    const session = JSON.parse(localStorage.getItem("userSession"));
+    const userId = session?.id;
+    if (!userId) return;
 
-  const handleNewScan = async (device) => {
-    const isValid = await validateMac(device.mac);
-    if (!isValid) return;
+    try {
+      const res = await fetch("http://localhost:3001/api/mac/by-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
 
-    const updatedList = [...scannedList, { ...device, status: "Unconfig" }];
-    localStorage.setItem("scannedDevices", JSON.stringify(updatedList));
-    setScannedList(updatedList);
+      const result = await res.json();
+      setScannedList(result.devices || []);
+    } catch (err) {
+      console.error("❌ Fetch failed:", err);
+    }
   };
+
+  useEffect(() => {
+    fetchDevices();
+  }, []);
 
   const validateMac = async (mac) => {
     try {
-      const res = await fetch("http://192.168.1.17:3001/api/mac/check", {
+      const res = await fetch("http://localhost:3001/api/mac/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ macaddress: mac })
+        body: JSON.stringify({ macaddress: mac }),
       });
       const data = await res.json();
       if (data.status === "OX003") return true;
       if (data.status === "OX002") alert("MAC already configured.");
-      else alert(data.message + " (" + data.status + ")");
+      else alert(data.message);
       return false;
+    } catch {
+      alert("MAC validation failed");
+      return false;
+    }
+  };
+
+  const handleNewScan = async (device) => {
+    const session = JSON.parse(localStorage.getItem("userSession"));
+    const userId = session?.id;
+    if (!userId) return;
+
+    const isValid = await validateMac(device.mac);
+    if (!isValid) return;
+
+    const alreadyShown = scannedList.find((d) => d.macaddress === device.mac);
+    if (alreadyShown) {
+      alert("Device already in dashboard");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:3001/api/mac/assign-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          macaddress: device.mac,
+          user_id: userId,
+          ssid: device.ssid,
+          pass: device.pass,
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setScannedList((prev) => [
+          ...prev,
+          {
+            macaddress: device.mac,
+            qr_ssid: device.ssid,
+            qr_pass: device.pass,
+            status: result.status || "unconfig",
+          },
+        ]);
+      } else {
+        alert(result.message);
+      }
     } catch (err) {
-      alert("MAC validation error");
-      return false;
+      alert("Failed to assign MAC");
     }
   };
 
   const handleStatusUpdate = (mac, newStatus) => {
     const updated = scannedList.map((d) =>
-      d.mac === mac ? { ...d, status: newStatus } : d
+      d.macaddress === mac ? { ...d, status: newStatus } : d
     );
-    localStorage.setItem("scannedDevices", JSON.stringify(updated));
     setScannedList(updated);
   };
 
@@ -83,7 +135,7 @@ export default function Dashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {scannedList.map((device) => (
             <MacCard
-              key={device.mac}
+              key={device.macaddress}
               device={device}
               onStatusChange={handleStatusUpdate}
             />
