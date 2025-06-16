@@ -5,18 +5,15 @@ export default function MacCard({ device, onStatusChange }) {
   const [showConfig, setShowConfig] = useState(false);
 
   const handleConfigSubmit = (formData) => {
-    const session = JSON.parse(localStorage.getItem("userSession"));
-    const userId = session?.id;
-    const key = `user_config_${userId}`;
-
-    const allConfigs = JSON.parse(localStorage.getItem(key)) || {};
-    allConfigs[device.macaddress] = formData;
-
-    localStorage.setItem(key, JSON.stringify(allConfigs));
-
-    onStatusChange(device.macaddress, "config"); 
-
+    // Update status in parent component
+    onStatusChange(device.macaddress, "config");
     setShowConfig(false);
+  };
+
+  const handleConnectToHotspot = () => {
+    alert(
+      `📱 Connect to WiFi:\n\nSSID: ${device.qr_ssid}\nPassword: ${device.qr_pass}\n\nThen click Configure button.`
+    );
   };
 
   return (
@@ -25,10 +22,10 @@ export default function MacCard({ device, onStatusChange }) {
         MAC: <span className="text-black">{device.macaddress}</span>
       </div>
       <div className="text-sm text-gray-700">
-        SSID: <span className="text-black">{device.qr_ssid}</span>
+        Hotspot SSID: <span className="text-black">{device.qr_ssid}</span>
       </div>
       <div className="text-sm text-gray-700">
-        Pass: <span className="text-black">{device.qr_pass}</span>
+        Hotspot Pass: <span className="text-black">{device.qr_pass}</span>
       </div>
       <div className="text-sm text-gray-700">
         Status:{" "}
@@ -39,17 +36,33 @@ export default function MacCard({ device, onStatusChange }) {
               : "text-yellow-600 font-semibold"
           }
         >
-          {device.status === "config" ? "Configured" : "Unconfigured"}
+          {device.status === "config" ? "✅ Configured" : "⚠️ Unconfigured"}
         </span>
       </div>
 
       {device.status !== "config" && (
-        <button
-          onClick={() => setShowConfig(true)}
-          className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded shadow"
-        >
-          Configure
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={handleConnectToHotspot}
+            className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded shadow"
+          >
+            📱 Connect to Hotspot
+          </button>
+          <button
+            onClick={() => setShowConfig(true)}
+            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded shadow"
+          >
+            ⚙️ Configure Device
+          </button>
+        </div>
+      )}
+
+      {device.status === "config" && (
+        <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+          <p className="text-sm text-green-700">
+            ✅ Device is configured and ready to use
+          </p>
+        </div>
       )}
 
       {showConfig && (
