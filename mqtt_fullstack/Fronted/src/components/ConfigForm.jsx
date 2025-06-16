@@ -10,17 +10,6 @@ export default function ConfigForm({ device, onSubmit, onCancel }) {
   const [ftpUrl, setFtpUrl] = useState("");
 
   useEffect(() => {
-<<<<<<< HEAD
-    const session = JSON.parse(localStorage.getItem("userSession"));
-    if (session?.common_name) {
-      setForm(prev => ({ ...prev, cn: session.common_name }));
-    }
-
-    if (device?.ftp_url) {
-      setFtpUrl(device.ftp_url);
-    }
-  }, [device]);
-=======
   const session = JSON.parse(localStorage.getItem("userSession"));
   if (session?.common_name) {
     setForm((prev) => ({ ...prev, cn: session.common_name }));
@@ -46,7 +35,6 @@ export default function ConfigForm({ device, onSubmit, onCancel }) {
   fetchFtpPath();
 }, []);
 
->>>>>>> fa2bb916b374801c0fae03f7bd92556099173f6f
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
