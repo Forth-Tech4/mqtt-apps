@@ -10,6 +10,7 @@ export default function ConfigForm({ device, onSubmit, onCancel }) {
   const [ftpUrl, setFtpUrl] = useState("");
 
   useEffect(() => {
+<<<<<<< HEAD
     const session = JSON.parse(localStorage.getItem("userSession"));
     if (session?.common_name) {
       setForm(prev => ({ ...prev, cn: session.common_name }));
@@ -19,6 +20,33 @@ export default function ConfigForm({ device, onSubmit, onCancel }) {
       setFtpUrl(device.ftp_url);
     }
   }, [device]);
+=======
+  const session = JSON.parse(localStorage.getItem("userSession"));
+  if (session?.common_name) {
+    setForm((prev) => ({ ...prev, cn: session.common_name }));
+  }
+
+  const fetchFtpPath = async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/mac/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ macaddress: device.macaddress })
+      });
+
+      const data = await res.json();
+      if (data?.ftp_path) {
+        setForm((prev) => ({ ...prev, ftp: data.ftp_path }));
+      }
+    } catch {
+      console.error("Failed to fetch FTP path");
+    }
+  };
+
+  fetchFtpPath();
+}, []);
+
+>>>>>>> fa2bb916b374801c0fae03f7bd92556099173f6f
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

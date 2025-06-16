@@ -212,4 +212,22 @@ router.post('/update-status', async (req, res) => {
   res.json({ success: true, message: "Status updated" });
 });
 
+
+router.post("/status", async (req, res) => {
+  const { macaddress } = req.body;
+
+  const { data, error } = await supabase
+    .from("devicetable")
+    .select("status, ftp_path")
+    .eq("macaddress", macaddress)
+    .single();
+
+  if (error || !data) {
+    return res.status(404).json({ message: "MAC not found", status: "ERX007" });
+  }
+
+  res.json({ status: data.status, ftp_path: data.ftp_path });
+});
+
+
 module.exports = router;
