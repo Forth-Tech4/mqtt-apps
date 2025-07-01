@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { showToast } from '../utils/ToastComponent'; // adjust path if needed
-
-
+import { showToast } from '../utils/ToastComponent';
 const LOCAL_KEY = 'savedMacAddresses';
 const ACTIVE_KEY = 'activeMac';
 
@@ -33,33 +31,12 @@ const SelectDevice = ({ onMacChange }) => {
       const updated = [...macList, trimmed];
       setMacList(updated);
       localStorage.setItem(LOCAL_KEY, JSON.stringify(updated));
-      setActiveMac(trimmed); // auto-select newly added MAC
+      setActiveMac(trimmed);
       localStorage.setItem(ACTIVE_KEY, trimmed);
       onMacChange(trimmed);
     }
     setMacInput('');
   };
-
-  // const addMac = () => {
-  //   const trimmed = macInput.trim().toUpperCase();
-  //   const macRegex = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
-
-  //   if (!macRegex.test(trimmed)) {
-  //     showToast('error', 'Invalid MAC address. Use format: XX:XX:XX:XX:XX:XX');
-  //     return;
-  //   }
-
-  //   if (!macList.includes(trimmed)) {
-  //     const updated = [...macList, trimmed];
-  //     setMacList(updated);
-  //     localStorage.setItem(LOCAL_KEY, JSON.stringify(updated));
-  //     setActiveMac(trimmed);
-  //     localStorage.setItem(ACTIVE_KEY, trimmed);
-  //     onMacChange(trimmed);
-  //   }
-  //   setMacInput('');
-  // };
-
 
   const deleteMac = (mac) => {
     const filtered = macList.filter(item => item !== mac);
@@ -74,12 +51,10 @@ const SelectDevice = ({ onMacChange }) => {
 
   const selectMac = (mac) => {
     if (mac === activeMac) {
-      // Unselect if already selected
       setActiveMac('');
       localStorage.removeItem(ACTIVE_KEY);
       onMacChange('');
     } else {
-      // Select the new one
       setActiveMac(mac);
       localStorage.setItem(ACTIVE_KEY, mac);
       onMacChange(mac);
@@ -134,9 +109,6 @@ const SelectDevice = ({ onMacChange }) => {
           </li>
         ))}
       </ul>
-
-
-
       {activeMac && (
         <div className="mt-4 text-sm text-green-700">
           Currently selected: <span className="font-mono font-semibold">{activeMac}</span>

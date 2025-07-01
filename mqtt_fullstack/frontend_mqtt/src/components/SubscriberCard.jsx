@@ -4,28 +4,28 @@ import { showToast } from '../utils/ToastComponent';
 function SubscriberCard({ onSubscribe, clientId }) {
   const [topicSuffix, setTopicSuffix] = useState('');
 
-  const handleSubscribe = () => {
+  const handleSubscribe = ({cs_clientId}) => {
     if (!clientId) {
       showToast("error", "Client ID not available. Please connect first.");
       return;
     }
 
-    const fullTopic = `${clientId}/${topicSuffix.trim()}`;
+    const fullTopic = `${cs_clientId}`;
 
     if (!topicSuffix.trim()) {
       showToast("error", "Please enter a topic to subscribe to.");
       return;
     }
 
-    if (topicSuffix === '#' || topicSuffix === '+') {
-      showToast("error", "Cannot subscribe to wildcard-only topics.");
-      return;
-    }
+    // if (topicSuffix === '#' || topicSuffix === '+') {
+    //   showToast("error", "Cannot subscribe to wildcard-only topics.");
+    //   return;
+    // }
 
-    if (!fullTopic.startsWith(`${clientId}/`) && fullTopic !== `${clientId}/#`) {
-      showToast("warning", `Access denied. You can only subscribe to topics under '${clientId}/#'`);
-      return;
-    }
+    // if (!fullTopic.startsWith(`${clientId}/`) && fullTopic !== `${clientId}/#`) {
+    //   showToast("warning", `Access denied. You can only subscribe to topics under '${clientId}/#'`);
+    //   return;
+    // }
 
     onSubscribe(fullTopic);
     showToast("success", `Subscribed to topic: ${fullTopic}`);
@@ -40,11 +40,9 @@ function SubscriberCard({ onSubscribe, clientId }) {
     }
 
     const wildCardTopic = `${clientId}/#`;
-    setTopicSuffix('#'); // only store suffix
+    setTopicSuffix('#'); 
     onSubscribe(wildCardTopic);
     showToast("success", `Subscribed to all your topics: ${wildCardTopic}`);
-
-    // setTopicSuffix('');
   };
 
   return (

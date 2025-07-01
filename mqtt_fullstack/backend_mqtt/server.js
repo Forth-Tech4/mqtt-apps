@@ -1,5 +1,3 @@
-
-
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -23,10 +21,6 @@ app.use(cors({
 }));
 
 app.use('/', mqttRoutes);
-
-
-
-
 initWebSocket(server);
 
 const PORT = process.env.PORT || 3001;

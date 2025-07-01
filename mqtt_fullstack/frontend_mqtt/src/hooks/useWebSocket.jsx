@@ -13,21 +13,13 @@ function useWebSocket(onDeviceUpdate) {
     subscribedTopicsRef.current = subscribedTopics;
   }, [subscribedTopics]);
 
-  const checkIfTopicIsSubscribed = (topicToCheck) => {
-    return subscribedTopicsRef.current.some(subTopic => {
-      if (subTopic.endsWith('/#')) {
-        const baseTopic = subTopic.slice(0, -2);
-        return topicToCheck.startsWith(baseTopic);
-      }
-      return topicToCheck === subTopic;
-    });
-  };
-
   const publishToTopic = (topic, message) => {
     if (!isConnected) {
       showToast('error', 'WebSocket not connected. Cannot publish message.');
       return;
     }
+
+    console.log(topic, "dsfaaaaaa")
 
     try {
       const parsedMessage = JSON.parse(message);
@@ -59,11 +51,26 @@ function useWebSocket(onDeviceUpdate) {
     }
   };
 
-  const connectWebSocket = (host, port) => {
-    // setClientId('Forthtech');
+  useEffect(() => {
+    subscribedTopicsRef.current = subscribedTopics;
+  }, [subscribedTopics]);
+
+  const checkIfTopicIsSubscribed = (topicToCheck) => {
+      return subscribedTopicsRef.current.some(subTopic => {
+          if (subTopic.endsWith('/#')) {
+              const baseTopic = subTopic.slice(0, -2);
+              return topicToCheck.startsWith(baseTopic);
+          }
+          return topicToCheck === subTopic;
+      });
+  };
+
+
+  const connectWebSocket = (host, port, clientIdInput) => {
+    setClientId(clientIdInput);
   
-    const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
-    // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
+    // const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
+    const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
 
     socket.onopen = () => {
       console.log('WebSocket Connected');
@@ -127,6 +134,8 @@ function useWebSocket(onDeviceUpdate) {
             return newMessages;
           });
 
+          console.log("📤 Publishing to topic:", topic);
+
           let statusMessage = '';
           if (typeof parsedMessage === 'object' && parsedMessage.peripheral) {
             const receivedPeripheral = parsedMessage.peripheral;
@@ -188,6 +197,8 @@ function useWebSocket(onDeviceUpdate) {
   };
 
   const subscribeTopic = (topic) => {
+    console.log("📥 Subscribing to topic:", topic);
+
     if (ws?.readyState !== WebSocket.OPEN) {
       showToast('error', 'WebSocket not connected. Please connect first.');
       return;
@@ -210,10 +221,11 @@ function useWebSocket(onDeviceUpdate) {
 
   // Check if 'peripheral' ends with 'web' and handle it
   if (peripheral.endsWith('web')) {
-    const trimmedPeripheral = peripheral.slice(0, -3).replace(/\/+$/, ''); // remove 'web' and any trailing slash
+    const trimmedPeripheral = peripheral.slice(0, -3).replace(/\/+$/, ''); 
     topic = `${clientId}/${trimmedPeripheral}`;
   } else {
     topic = MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
+  
   }
 
   const message = { peripheral, ...commandPayload };
@@ -290,7 +302,6 @@ function useWebSocket(onDeviceUpdate) {
     setSubscribedTopics([]);
     subscribedTopicsRef.current = [];
     setMessages([]);
-    // showToast('info', 'Disconnected from WebSocket.');
   };
 
   const clearMessages = () => {

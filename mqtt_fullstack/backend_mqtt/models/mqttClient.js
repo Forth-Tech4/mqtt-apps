@@ -13,22 +13,12 @@ function connectWithCerts({ hostname, port, keyPath, certPath, caPath, clientId 
         console.log('MQTT: Ending existing MQTT client connection.');
         mqttClient.end(true, () => {
             console.log('MQTT: Existing MQTT client disconnected.');
-            // DO NOT set mqttClient = null here.
-            // The new mqttClient will be assigned below, overwriting this reference.
-            // If you set it to null here, and the new connection is very fast,
-            // you can hit a race condition where the 'connect' event fires
-            // before the new mqttClient is assigned, but after the old one is nullified.
         });
-        // Add a small delay or ensure the old client is fully ended before creating a new one,
-        // although mqtt.connect usually handles this gracefully by creating a new instance.
-        // For simplicity and to avoid race conditions, it's safer to just create a new client
-        // and let the garbage collector handle the old one after it's ended.
     }
 
     const mqttUrl = `mqtts://${hostname}:${port}`;
     console.log(`MQTT: Attempting to connect to ${mqttUrl}`);
 
-    // Assign the new MQTT client instance immediately
     mqttClient = mqtt.connect(mqttUrl, {
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certPath),
@@ -42,9 +32,6 @@ function connectWithCerts({ hostname, port, keyPath, certPath, caPath, clientId 
         isMqttConnected = true;
         lastCertError = false;
         console.log('MQTT: Client connected successfully!');
-
-        // Ensure mqttClient is not null before trying to subscribe
-        // This check is a safeguard, but with the fix above, it should always be valid here.
         if (mqttClient) {
             mqttClient.subscribe(DEFAULT_MQTT_SUBSCRIPTION_TOPIC, (err) => {
                 if (err) {
@@ -52,11 +39,11 @@ function connectWithCerts({ hostname, port, keyPath, certPath, caPath, clientId 
                 } else {
                     console.log(`MQTT: Successfully subscribed to default topic: ${DEFAULT_MQTT_SUBSCRIPTION_TOPIC}`);
                 }
-                onConnect(); // Call onConnect after attempting subscription
+                onConnect();
             });
         } else {
             console.error("MQTT: mqttClient is null on 'connect' event. This should not happen with the fix.");
-            onConnect(); // Still call onConnect to avoid blocking the frontend
+            onConnect(); 
         }
     });
 
@@ -70,8 +57,6 @@ function connectWithCerts({ hostname, port, keyPath, certPath, caPath, clientId 
     mqttClient.on('close', () => {
         isMqttConnected = false;
         console.log('MQTT: Client disconnected.');
-        // If you want to explicitly null out the client on disconnect, do it here.
-        // mqttClient = null; // Optional: can be set here if you want to explicitly clear it on client's self-close
     });
 
     mqttClient.on('reconnect', () => {
