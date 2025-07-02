@@ -4,28 +4,19 @@ import { showToast } from '../utils/ToastComponent';
 function SubscriberCard({ onSubscribe, clientId }) {
   const [topicSuffix, setTopicSuffix] = useState('');
 
-  const handleSubscribe = ({cs_clientId}) => {
+  const handleSubscribe = () => {
     if (!clientId) {
       showToast("error", "Client ID not available. Please connect first.");
       return;
     }
 
-    const fullTopic = `${cs_clientId}`;
-
     if (!topicSuffix.trim()) {
       showToast("error", "Please enter a topic to subscribe to.");
       return;
     }
-
-    // if (topicSuffix === '#' || topicSuffix === '+') {
-    //   showToast("error", "Cannot subscribe to wildcard-only topics.");
-    //   return;
-    // }
-
-    // if (!fullTopic.startsWith(`${clientId}/`) && fullTopic !== `${clientId}/#`) {
-    //   showToast("warning", `Access denied. You can only subscribe to topics under '${clientId}/#'`);
-    //   return;
-    // }
+    
+    // Construct the full topic with clientId/ prefix for custom subscriptions
+    const fullTopic = `${clientId}/${topicSuffix.replace(/^\/+/, '')}`;
 
     onSubscribe(fullTopic);
     showToast("success", `Subscribed to topic: ${fullTopic}`);
@@ -39,10 +30,17 @@ function SubscriberCard({ onSubscribe, clientId }) {
       return;
     }
 
-    const wildCardTopic = `${clientId}/#`;
-    setTopicSuffix('#'); 
-    onSubscribe(wildCardTopic);
-    showToast("success", `Subscribed to all your topics: ${wildCardTopic}`);
+    // Subscribe to all Forthtech topics (for structured device commands with MAC)
+    const forthtechWildcardTopic = `Forthtech/#`;
+    onSubscribe(forthtechWildcardTopic);
+    showToast("success", `Subscribed to all Forthtech topics: ${forthtechWildcardTopic}`);
+
+    // Also subscribe to all client-specific topics (for raw publishes and structured commands without MAC)
+    const clientWildcardTopic = `${clientId}/#`;
+    onSubscribe(clientWildcardTopic);
+    showToast("success", `Subscribed to all your client-specific topics: ${clientWildcardTopic}`);
+
+    setTopicSuffix('#'); // Set suffix for display, though two subscriptions are made
   };
 
   return (
@@ -67,7 +65,7 @@ function SubscriberCard({ onSubscribe, clientId }) {
           />
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          You can only subscribe to topics that start with your client ID: {clientId || "Not connected"}
+          You can subscribe to topics under your client ID: <span className="font-mono bg-gray-100 px-1 rounded">{clientId || "Not connected"}/...</span>
         </p>
       </div>
 
@@ -84,7 +82,7 @@ function SubscriberCard({ onSubscribe, clientId }) {
           onClick={handleQuickSubscribe}
           disabled={!clientId}
         >
-          Subscribe to All My Topics
+          Subscribe to All Relevant Topics
         </button>
       </div>
     </div>

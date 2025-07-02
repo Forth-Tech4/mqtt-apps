@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from "react";
+// src/components/Main.jsx
+import React, { useState, useCallback, useEffect } from "react";
 import useWebSocket from "../hooks/useWebSocket";
 import ConnectionCard from "./ConnectionCard";
 import ControlsCard from "./ControlsCard";
@@ -8,11 +9,18 @@ import ReceiverCard from "./ReceiverCard";
 import "../utils/fontawesome";
 import { showToast } from "../utils/ToastComponent";
 import SelectDevice from "./Selectdevice";
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
 const Main = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [macAddress, setMacAddress] = useState(
     localStorage.getItem("activeMac") || ""
   );
-  const [userClientId, setUserClientId] = useState("");
+  const [userClientId, setUserClientId] = useState(user?.common_name || "");
+
   const [deviceState, setDeviceState] = useState({
     laser: false,
     light: false,
@@ -21,6 +29,15 @@ const Main = () => {
     pan: 0,
     tilt: 0,
   });
+
+  useEffect(() => {
+    if (user && user.common_name) {
+      setUserClientId(user.common_name);
+    } else {
+      setUserClientId("");
+    }
+  }, [user]);
+
   const handleDeviceUpdate = useCallback((peripheral, messagePayload) => {
     setDeviceState((prev) => {
       const newState = { ...prev };
@@ -36,7 +53,7 @@ const Main = () => {
             newState.buzzer = messagePayload.mode;
           }
           break;
-        case "light": // Renamed from 'led'
+        case "light":
         case "laser":
         case "water":
           if (
@@ -57,6 +74,7 @@ const Main = () => {
       return newState;
     });
   }, []);
+
   const {
     ws,
     isConnected,
@@ -65,14 +83,16 @@ const Main = () => {
     clientId,
     connectWebSocket,
     disconnectWebSocket,
-    publishCommand,
+    publishRaw,
+    publishStructuredCommand,
     subscribeTopic,
     clearMessages,
   } = useWebSocket(handleDeviceUpdate);
+
   const handleConnect = (host, port, clientIdFromInput) => {
     connectWebSocket(host, port, clientIdFromInput);
-    setUserClientId(clientIdFromInput); // Store the client ID for later use
   };
+
   const handleSubscribe = (topic) => {
     if (!isConnected) {
       showToast("error", "Please connect to WebSocket first!");
@@ -84,9 +104,8 @@ const Main = () => {
     }
     subscribeTopic(topic);
   };
+
   const handlePublish = (topic, stringifiedPayload) => {
-    console.log("topic---------->", topic);
-    console.log("stringifiedPayload---------->", stringifiedPayload);
     if (!isConnected) {
       showToast("error", "Please connect to WebSocket first!");
       return;
@@ -100,7 +119,6 @@ const Main = () => {
       showToast("error", "Topic and payload must not be empty!");
       return;
     }
-    // Attempt to parse the stringifiedPayload to validate it before sending
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(stringifiedPayload);
@@ -111,27 +129,48 @@ const Main = () => {
       );
       return;
     }
-    const peripheral = topic.split("/")[1] + topic.split("/")[2] || "non-found";
-    publishCommand(peripheral, parsedPayload, macAddress);
-    handleDeviceUpdate(peripheral, parsedPayload);
+    publishRaw(topic, stringifiedPayload);
+    const peripheral = topic.split('/')[2];
+    if (peripheral) {
+      handleDeviceUpdate(peripheral, parsedPayload);
+    }
   };
-  const handleStructuredPublish = (peripheral, payload, mac = "") => {
+
+  const handleStructuredPublish = (peripheral, payload) => {
     if (!isConnected) {
       showToast("error", "Please connect to WebSocket first!");
       return;
     }
-    const targetTopic = mac ? `Forthtech/${mac}` : `Forthtech`; // :white_tick: Handles both specific and "all"
-    publishCommand(peripheral, payload, targetTopic);
+    publishStructuredCommand(peripheral, payload, macAddress);
     handleDeviceUpdate(peripheral, payload);
   };
+
+  const handleLogout = () => {
+    disconnectWebSocket();
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div className="bg-zinc-800 font-sans p-5 min-h-screen">
       <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-5">
+          {user && (
+            <span className="text-white text-lg font-semibold">
+              Logged in as: {user.name} ({user.common_name})
+            </span>
+          )}
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out"
+          >
+            Logout
+          </button>
+        </div>
         <div className="grid grid-cols-1 gap-8">
           <ConnectionCard
             onConnect={handleConnect}
             onDisconnect={disconnectWebSocket}
-            setClientId={setUserClientId}
           />
           <SelectDevice onMacChange={setMacAddress} />
           <ControlsCard

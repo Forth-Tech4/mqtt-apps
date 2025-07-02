@@ -63,7 +63,7 @@ const SelectDevice = ({ onMacChange }) => {
 
 
   return (
-    <div className="bg-white p-5 rounded-md shadow-md w-full  mx-auto mb-4">
+    <div className="bg-white p-5 rounded-md shadow-md w-full mx-auto mb-4">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Select Device Address</h2>
 
       <div className="flex gap-2 mb-4">
@@ -81,12 +81,6 @@ const SelectDevice = ({ onMacChange }) => {
           Add
         </button>
       </div>
-
-      {/* {macList.length === 0 && (
-        <div className="text-sm text-red-500 mb-2">
-          Please add and select a MAC address to continue.
-        </div>
-      )} */}
 
       <ul className="space-y-2">
         {macList.map((mac, idx) => (

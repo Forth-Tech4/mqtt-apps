@@ -1,3 +1,4 @@
+// src/hooks/useWebSocket.js
 import { useState, useEffect, useRef } from 'react';
 import { showToast } from '../utils/ToastComponent';
 
@@ -5,7 +6,7 @@ function useWebSocket(onDeviceUpdate) {
   const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [clientId, setClientId] = useState('Forthtech');
+  const [clientId, setClientId] = useState(''); // This will be the user's common_name
   const [subscribedTopics, setSubscribedTopics] = useState([]);
   const subscribedTopicsRef = useRef([]);
 
@@ -13,41 +14,42 @@ function useWebSocket(onDeviceUpdate) {
     subscribedTopicsRef.current = subscribedTopics;
   }, [subscribedTopics]);
 
-  const publishToTopic = (topic, message) => {
+  // Function for raw publishing (e.g., from PublisherCard)
+  const publishRaw = (topic, message) => {
     if (!isConnected) {
       showToast('error', 'WebSocket not connected. Cannot publish message.');
       return;
     }
 
-    console.log(topic, "dsfaaaaaa")
-
     try {
-      const parsedMessage = JSON.parse(message);
+      // Validate if message is a JSON string, but don't parse it here
+      // The backend expects a string, and we're sending what the user typed.
+      JSON.parse(message); // Just to check if it's valid JSON
       const messageToSend = JSON.stringify({ action: 'publish', topic, message });
 
-      console.log('⬆️ SENT to server (Publish - Manual):', {
+      console.log('⬆️ SENT to server (Publish - Raw):', {
         topic,
-        parsedMessage,
+        message,
       });
 
       ws.send(messageToSend);
+      showToast('success', `Published raw message to ${topic}`);
 
+      // If the topic matches a subscription, add it to messages
       if (checkIfTopicIsSubscribed(topic)) {
         setMessages(prev => [
           ...prev,
           {
             topic,
-            message: parsedMessage,
+            message: JSON.parse(message), // Parse for display in UI
             timestamp: Date.now(),
             local: true,
           },
         ]);
       }
-
-      showToast('success', `Published to ${topic}`);
     } catch (err) {
       showToast('error', 'Message must be a valid JSON string.');
-      console.error('Invalid JSON for message:', err);
+      console.error('Invalid JSON for raw message:', err);
     }
   };
 
@@ -58,19 +60,17 @@ function useWebSocket(onDeviceUpdate) {
   const checkIfTopicIsSubscribed = (topicToCheck) => {
       return subscribedTopicsRef.current.some(subTopic => {
           if (subTopic.endsWith('/#')) {
-              const baseTopic = subTopic.slice(0, -2);
-              return topicToCheck.startsWith(baseTopic);
+            const baseTopic = subTopic.slice(0, -2);
+            return topicToCheck.startsWith(baseTopic);
           }
           return topicToCheck === subTopic;
       });
   };
 
-
   const connectWebSocket = (host, port, clientIdInput) => {
-    setClientId(clientIdInput);
-  
-    // const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
-    const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
+    setClientId(clientIdInput); // Set the clientId received from ConnectionCard/Main
+
+    const socket = new WebSocket(`${import.meta.env.VITE_BACKEND_WS_URL}`);
 
     socket.onopen = () => {
       console.log('WebSocket Connected');
@@ -134,8 +134,6 @@ function useWebSocket(onDeviceUpdate) {
             return newMessages;
           });
 
-          console.log("📤 Publishing to topic:", topic);
-
           let statusMessage = '';
           if (typeof parsedMessage === 'object' && parsedMessage.peripheral) {
             const receivedPeripheral = parsedMessage.peripheral;
@@ -148,7 +146,7 @@ function useWebSocket(onDeviceUpdate) {
                 break;
               case 'buzzer':
                 if (parsedMessage.mode) {
-                  statusMessage = `Buzzer mode set to: ${parsedMessage.mode}`;
+                  statusMessage = `Buzzer mode set to: ${parsedPeripheral.mode}`;
                 }
                 break;
               case 'light':
@@ -210,28 +208,27 @@ function useWebSocket(onDeviceUpdate) {
     showToast('info', `Subscribed to topic: ${topic}`);
   };
 
-  const publishCommand = (peripheral, commandPayload) => {
-  if (!isConnected) {
-    showToast('error', 'WebSocket not connected. Cannot send command.');
-    return;
-  }
+  // Function for structured commands (e.g., from ControlsCard)
+  const publishStructuredCommand = (peripheral, commandPayload, macAddress) => {
+    if (!isConnected) {
+      showToast('error', 'WebSocket not connected. Cannot send command.');
+      return;
+    }
 
-  const MAC_ADDRESS = localStorage.getItem('activeMac');
-  let topic = '';
+    let topic;
+    if (macAddress && macAddress.trim() !== '') {
+      // If MAC address is selected, topic is Forthtech/{MAC_ADDRESS}
+      topic = `Forthtech/${macAddress}`;
+    } else {
+      // If no MAC address is selected, topic is {clientId}
+      topic = `${clientId}`;
+    }
 
-  // Check if 'peripheral' ends with 'web' and handle it
-  if (peripheral.endsWith('web')) {
-    const trimmedPeripheral = peripheral.slice(0, -3).replace(/\/+$/, ''); 
-    topic = `${clientId}/${trimmedPeripheral}`;
-  } else {
-    topic = MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
-  
-  }
+    // The message payload will contain the peripheral and its command
+    const message = { peripheral, ...commandPayload };
 
-  const message = { peripheral, ...commandPayload };
-
-  let isValid = true;
-  let errorMessage = '';
+    let isValid = true;
+    let errorMessage = '';
 
     switch (peripheral) {
       case 'pan':
@@ -263,9 +260,9 @@ function useWebSocket(onDeviceUpdate) {
           isValid = false;
           errorMessage = `${peripheral} value must be 0 or 1.`;
         }
-       if (typeof message.value === 'boolean') {
-  message.value = message.value ? 1 : 0;
-}
+        if (typeof message.value === 'boolean') {
+          message.value = message.value ? 1 : 0;
+        }
         break;
       default:
         if (!peripheral) {
@@ -281,14 +278,14 @@ function useWebSocket(onDeviceUpdate) {
 
     if (ws?.readyState === WebSocket.OPEN) {
       const messageToSend = JSON.stringify({ action: 'publish', topic, message: JSON.stringify(message) });
-      console.log('⬆️ SENT to server (Publish):', JSON.parse(messageToSend));
+      console.log('⬆️ SENT to server (Publish Structured):', JSON.parse(messageToSend));
       ws.send(messageToSend);
-      showToast('success', `Command sent to ${peripheral}: ${JSON.stringify(commandPayload)}`);
+      showToast('success', `Command sent to topic "${topic}" for peripheral "${peripheral}"`);
 
       if (checkIfTopicIsSubscribed(topic)) {
         setMessages(prev => [...prev, {
           topic,
-          message,
+          message, // Use the parsed message object for display
           timestamp: Date.now(),
           local: true
         }]);
@@ -319,8 +316,8 @@ function useWebSocket(onDeviceUpdate) {
     setMessages,
     connectWebSocket,
     subscribeTopic,
-    publishCommand,
-    publishToTopic,
+    publishRaw,
+    publishStructuredCommand,
     disconnectWebSocket,
     clearMessages,
   };

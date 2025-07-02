@@ -8,7 +8,6 @@ function ReceiverCard({ messages, clientId, onClear }) {
   };
   const displayableMessages = messages;
 
-
   return (
     <div className="bg-white p-5 rounded-md shadow-md mb-2">
       <div className="flex justify-between items-center mb-5">
@@ -26,7 +25,7 @@ function ReceiverCard({ messages, clientId, onClear }) {
       {clientId ? (
         <>
           <div className="mb-2 text-sm text-gray-600">
-            Showing messages for topics: <span className="font-mono bg-gray-100 px-1 rounded">{clientId}/#</span>
+            Showing messages for topics: <span className="font-mono bg-gray-100 px-1 rounded">{clientId}/#</span> (or more specific subscriptions)
           </div>
 
           {displayableMessages.length === 0 ? (

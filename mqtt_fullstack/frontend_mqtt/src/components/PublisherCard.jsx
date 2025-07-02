@@ -2,11 +2,14 @@ import React, { useState } from "react";
 import { showToast } from "../utils/ToastComponent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleDown, faAngleUp } from "@fortawesome/free-solid-svg-icons";
+
 function PublisherCard({ onPublish, isConnected, clientId }) {
   const [topicSuffix, setTopicSuffix] = useState("");
   const [message, setMessage] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+
   const toggleAccordion = () => setIsOpen(!isOpen);
+
   const handlePublish = () => {
     if (!isConnected) {
       showToast("error", "Please connect first.");
@@ -20,24 +23,30 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
       showToast("error", "Please enter a message.");
       return;
     }
-    const sender = "web";
+
+    // Removed 'sender' and its usage to remove '/web'
     const trimmedSuffix = topicSuffix.trim().replace(/^\/+|\/+$/g, "");
     const topicMiddle = trimmedSuffix ? `/${trimmedSuffix}` : "";
-    const fullTopic = `${clientId}${topicMiddle}/${sender}`;
-    if (!fullTopic.startsWith(`${clientId}/`)) {
+    
+    // Construct the full topic without '/web'
+    const fullTopic = `${clientId}${topicMiddle}`;
+
+    // Validation to match clientId/
+    if (!fullTopic.startsWith(`${clientId}`)) { // Adjusted validation slightly
       showToast(
         "error",
-        `You can only publish to topics starting with '${clientId}/'`
+        `You can only publish to topics starting with '${clientId}'`
       );
       return;
     }
+
     onPublish(fullTopic, message);
-    const cleanTopic = fullTopic.endsWith("/web")
-      ? fullTopic.slice(0, -4)
-      : fullTopic;
-    showToast("success", `Published to topic: ${cleanTopic}`);
+    
+    // Simplified the toast message as '/web' is no longer appended
+    showToast("success", `Published to topic: ${fullTopic}`);
     setMessage("");
   };
+
   return (
     <div className="bg-white p-5 rounded-md shadow-md mb-2">
       <div
@@ -83,7 +92,7 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
             </div>
             <p className="text-xs text-gray-500 mt-1">
               You can only publish to topics that start with your client ID:{" "}
-              {clientId || "Not connected"}
+              <span className="font-mono bg-gray-100 px-1 rounded">{clientId || "Not connected"}/...</span>
             </p>
           </div>
           <div className="mb-5">
@@ -95,7 +104,7 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
             </label>
             <textarea
               id="message"
-              placeholder="Message content"
+              placeholder="Message content (JSON format expected)"
               className="shadow border rounded w-full py-2 px-3 text-gray-700 h-24"
               value={message}
               onChange={(e) => setMessage(e.target.value)}

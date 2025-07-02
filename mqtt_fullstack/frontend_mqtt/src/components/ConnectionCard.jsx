@@ -1,20 +1,19 @@
+// src/components/ConnectionCard.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faAngleDown, faAngleUp } from '@fortawesome/free-solid-svg-icons';
 import { showToast } from '../utils/ToastComponent';
-// Remove pkijs and asn1js imports as they are no longer needed for client ID extraction
-// import * as pkijs from 'pkijs';
-// import * as asn1js from 'asn1js';
-// window.pkijs = pkijs;
-// window.asn1js = asn1js;
+import { useAuth } from '../context/AuthContext';
 
-function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
+function ConnectionCard({ onConnect, onDisconnect }) {
+  const { user } = useAuth();
+
   const [hostname, setHostname] = useState('');
   const [port, setPort] = useState('');
   const [clientIdInput, setClientIdInput] = useState("");
-  const [clientKey, setClientKey] = useState(null);
-  const [clientCert, setClientCert] = useState(null);
-  const [caCert, setCaCert] = useState(null);
+  const [clientKey, setClientKey] = useState('');
+  const [clientCert, setClientCert] = useState('');
+  const [caCert, setCaCert] = useState('');
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -24,35 +23,30 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
   const caCertRef = useRef(null);
 
   const toggleAccordion = () => setIsOpen(!isOpen);
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
 
-  const handleFileChange = async (e, setter, key) => {
-    const file = e.target.files[0];
-    if (file) {
-      setter(file);
-      const base64 = await fileToBase64(file);
+  useEffect(() => {
+    if (user) {
+      setHostname(import.meta.env.VITE_MQTT_HOST || 'localhost');
+      setPort(import.meta.env.VITE_MQTT_PORT || '9001');
+      setClientIdInput(user.common_name);
 
-      const metadata = {
-        name: file.name,
-        type: file.type,
-        data: base64,
-      };
-      localStorage.setItem(key, JSON.stringify(metadata));
+      setClientKey(user.client_key || '');
+      setClientCert(user.client_crt || '');
+      setCaCert(user.ca_cert || '');
+
+      showToast('info', 'Certificates loaded from user data. Ready to connect.');
+    } else {
+      setHostname('');
+      setPort('');
+      setClientIdInput('');
+      setClientKey('');
+      setClientCert('');
+      setCaCert('');
+      if (clientKeyRef.current) clientKeyRef.current.value = '';
+      if (clientCertRef.current) clientCertRef.current.value = '';
+      if (caCertRef.current) caCertRef.current.value = '';
     }
-  };
-
-  const handleClearFile = (ref, setter, key) => {
-    if (ref.current) ref.current.value = '';
-    setter(null);
-    if (key) localStorage.removeItem(key);
-  };
+  }, [user]);
 
   const handleConnect = async () => {
     if (!hostname || !port) {
@@ -71,7 +65,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
     }
 
     if (!clientKey || !clientCert || !caCert) {
-      showToast("error", "All certificate files are required.");
+      showToast("error", "All certificate data is required. Please log in.");
       return;
     }
 
@@ -85,10 +79,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
 
     setLoading(true);
     try {
-
-      const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
-        //  const res = await fetch(`https://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {       // for live server
-
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/upload-certs`, {
         method: 'POST',
         body: formData,
       });
@@ -100,9 +91,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
         showToast("error", "Certificate authentication failed.");
       } else {
         showToast("success", `Connected to MQTT broker as ${clientIdInput}`);
-        setClientId(clientIdInput); // Set the client ID in the parent state
-        setClientIdInput(clientIdInput); // Update local state if needed (though it's constant)
-        onConnect(hostname, port, clientIdInput); 
+        onConnect(hostname, port, clientIdInput);
         setIsConnected(true);
       }
     } catch (err) {
@@ -122,41 +111,6 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
     showToast("error", "Disconnected successfully.");
   };
 
-  useEffect(() => {
-    const loadFile = (key, setter, ref) => {
-      const stored = localStorage.getItem(key);
-      if (!stored) return;
-
-      try {
-        const { name, type, data } = JSON.parse(stored);
-        const byteString = atob(data.split(',')[1]);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        const blob = new Blob([ab], { type });
-        const file = new File([blob], name, { type });
-        setter(file);
-
-        setTimeout(() => {
-          if (ref.current) {
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            ref.current.files = dt.files;
-          }
-        }, 0);
-      } catch (err) {
-        console.error(`Failed to load ${key}`, err);
-      }
-    };
-
-    loadFile('clientKey', setClientKey, clientKeyRef);
-    loadFile('clientCert', setClientCert, clientCertRef);
-    loadFile('caCert', setCaCert, caCertRef);
-  }, []);
-
-
   return (
     <div className="bg-white p-5 rounded-md shadow-md mb-2">
       <div className="flex justify-between items-center cursor-pointer" onClick={toggleAccordion}>
@@ -175,6 +129,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
                 value={hostname}
                 onChange={(e) => setHostname(e.target.value)}
                 className="shadow border rounded w-full py-2 px-3"
+                placeholder="e.g., localhost"
               />
             </div>
             <div className="flex-1 mb-5">
@@ -185,6 +140,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
                 value={port}
                 onChange={(e) => setPort(e.target.value)}
                 className="shadow border rounded w-full py-2 px-3"
+                placeholder="e.g., 9001"
               />
             </div>
             <div className="flex-1 mb-5">
@@ -194,43 +150,27 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
                 id="clientId"
                 value={clientIdInput}
                 onChange={(e) => setClientIdInput(e.target.value)}
-                placeholder="Enter Client ID"
                 className="shadow border rounded w-full py-2 px-3"
+                placeholder="Client ID (from login)"
               />
             </div>
           </div>
 
-          {[
-            { id: 'clientKey', label: 'Client Key', ref: clientKeyRef, setter: setClientKey },
-            { id: 'clientCert', label: 'Client Cert', ref: clientCertRef, setter: setClientCert },
-            { id: 'caCert', label: 'CA Cert', ref: caCertRef, setter: setCaCert }
-          ].map(({ id, label, ref, setter }) => (
-            <div key={id} className="mb-4">
-              <label htmlFor={id} className="block text-gray-700 text-sm font-medium mb-1">{label}:</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  id={id}
-                  ref={ref}
-                  onChange={(e) => handleFileChange(e, setter, id)}
-                  className="shadow border rounded w-full py-2 px-3 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleClearFile(ref, setter, id)}
-                  className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded text-sm"
-                >
-                  Clear
-                </button>
-              </div>
+          {user && (
+            <div className="mb-4 text-sm text-gray-600">
+              Certificates (Client Key, Client Cert, CA Cert) are automatically loaded from your login.
+              <br/>
+              {clientKey && <span className="block mt-1">Client Key: Loaded</span>}
+              {clientCert && <span className="block">Client Cert: Loaded</span>}
+              {caCert && <span className="block">CA Cert: Loaded</span>}
             </div>
-          ))}
+          )}
 
           <div className="flex gap-2">
             <button
-              disabled={loading}
+              disabled={loading || !user || !clientKey || !clientCert || !caCert}
               onClick={handleConnect}
-              className={`bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded ${loading ? 'opacity-50' : ''}`}
+              className={`bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded ${loading || !user || !clientKey || !clientCert || !caCert ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {loading ? 'Connecting...' : 'Connect'}
             </button>
