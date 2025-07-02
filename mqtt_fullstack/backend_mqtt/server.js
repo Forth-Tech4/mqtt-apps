@@ -4,8 +4,10 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const mqttRoutes = require('./routes/mqttRoutes');
+const userRoutes = require('./routes/userRoutes');
 const { initWebSocket } = require('./websocket/wsHandler');
 const cors = require('cors');
+const errorHandler = require('./middleware/errorHandler');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -19,6 +21,11 @@ app.use(cors({
   ],
   credentials: true
 }));
+
+
+app.use('/api/users', userRoutes);
+
+app.use(errorHandler);
 
 app.use('/', mqttRoutes);
 initWebSocket(server);
