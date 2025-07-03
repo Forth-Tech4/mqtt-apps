@@ -5,12 +5,11 @@ import { faAngleDown, faAngleUp } from '@fortawesome/free-solid-svg-icons';
 import { showToast } from '../utils/ToastComponent';
 import { useAuth } from '../context/AuthContext';
 
-function ConnectionCard({ onConnect, onDisconnect }) {
+function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInput }) { // Added clientIdInput and setClientIdInput props
   const { user } = useAuth();
 
   const [hostname, setHostname] = useState('');
   const [port, setPort] = useState('');
-  const [clientIdInput, setClientIdInput] = useState("");
   const [clientKey, setClientKey] = useState('');
   const [clientCert, setClientCert] = useState('');
   const [caCert, setCaCert] = useState('');
@@ -28,7 +27,10 @@ function ConnectionCard({ onConnect, onDisconnect }) {
     if (user) {
       setHostname(import.meta.env.VITE_MQTT_HOST || 'localhost');
       setPort(import.meta.env.VITE_MQTT_PORT || '9001');
-      setClientIdInput(user.common_name);
+      // Initialize clientIdInput from user.common_name only if it's not already set (e.g., by user typing)
+      if (!clientIdInput) {
+        setClientIdInput(user.common_name);
+      }
 
       setClientKey(user.client_key || '');
       setClientCert(user.client_crt || '');
@@ -38,7 +40,7 @@ function ConnectionCard({ onConnect, onDisconnect }) {
     } else {
       setHostname('');
       setPort('');
-      setClientIdInput('');
+      setClientIdInput(''); // Clear clientIdInput on logout
       setClientKey('');
       setClientCert('');
       setCaCert('');
@@ -46,7 +48,7 @@ function ConnectionCard({ onConnect, onDisconnect }) {
       if (clientCertRef.current) clientCertRef.current.value = '';
       if (caCertRef.current) caCertRef.current.value = '';
     }
-  }, [user]);
+  }, [user, clientIdInput, setClientIdInput]); // Added clientIdInput and setClientIdInput to dependencies
 
   const handleConnect = async () => {
     if (!hostname || !port) {
@@ -75,7 +77,7 @@ function ConnectionCard({ onConnect, onDisconnect }) {
     formData.append('clientKey', clientKey);
     formData.append('clientCert', clientCert);
     formData.append('caCert', caCert);
-    formData.append('clientId', clientIdInput);
+    formData.append('clientId', clientIdInput); // Use the editable clientIdInput
 
     setLoading(true);
     try {
@@ -91,7 +93,7 @@ function ConnectionCard({ onConnect, onDisconnect }) {
         showToast("error", "Certificate authentication failed.");
       } else {
         showToast("success", `Connected to MQTT broker as ${clientIdInput}`);
-        onConnect(hostname, port, clientIdInput);
+        onConnect(hostname, port, clientIdInput); // Pass the editable clientIdInput
         setIsConnected(true);
       }
     } catch (err) {
@@ -149,7 +151,7 @@ function ConnectionCard({ onConnect, onDisconnect }) {
                 type="text"
                 id="clientId"
                 value={clientIdInput}
-                onChange={(e) => setClientIdInput(e.target.value)}
+                onChange={(e) => setClientIdInput(e.target.value)} // Live update clientIdInput
                 className="shadow border rounded w-full py-2 px-3"
                 placeholder="Client ID (from login)"
               />

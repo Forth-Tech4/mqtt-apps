@@ -19,7 +19,8 @@ const Main = () => {
   const [macAddress, setMacAddress] = useState(
     localStorage.getItem("activeMac") || ""
   );
-  const [userClientId, setUserClientId] = useState(user?.common_name || "");
+  // Centralized state for the editable client ID
+  const [editableClientId, setEditableClientId] = useState(user?.common_name || "");
 
   const [deviceState, setDeviceState] = useState({
     laser: false,
@@ -31,12 +32,13 @@ const Main = () => {
   });
 
   useEffect(() => {
-    if (user && user.common_name) {
-      setUserClientId(user.common_name);
-    } else {
-      setUserClientId("");
+    // Initialize editableClientId when user data loads, but only if it's not already edited
+    if (user && user.common_name && !editableClientId) {
+      setEditableClientId(user.common_name);
+    } else if (!user) {
+      setEditableClientId(""); // Clear on logout
     }
-  }, [user]);
+  }, [user, editableClientId]); // Depend on editableClientId to avoid re-setting if user types
 
   const handleDeviceUpdate = useCallback((peripheral, messagePayload) => {
     setDeviceState((prev) => {
@@ -80,7 +82,6 @@ const Main = () => {
     isConnected,
     messages,
     setMessages,
-    clientId,
     connectWebSocket,
     disconnectWebSocket,
     publishRaw,
@@ -90,6 +91,7 @@ const Main = () => {
   } = useWebSocket(handleDeviceUpdate);
 
   const handleConnect = (host, port, clientIdFromInput) => {
+    // Pass the currently edited clientIdInput to connectWebSocket
     connectWebSocket(host, port, clientIdFromInput);
   };
 
@@ -130,8 +132,13 @@ const Main = () => {
       return;
     }
     publishRaw(topic, stringifiedPayload);
-    const peripheral = topic.split('/')[2];
-    if (peripheral) {
+    // The peripheral is now inside the message for structured commands,
+    // but for raw publishes, it might still be part of the topic if user puts it there.
+    // This logic might need refinement depending on expected raw publish formats.
+    const peripheral = topic.split('/').pop(); // Assumes last part of topic is peripheral for raw
+    if (parsedPayload.peripheral) { // Prefer peripheral from payload if it exists
+      handleDeviceUpdate(parsedPayload.peripheral, parsedPayload);
+    } else if (peripheral) {
       handleDeviceUpdate(peripheral, parsedPayload);
     }
   };
@@ -141,7 +148,8 @@ const Main = () => {
       showToast("error", "Please connect to WebSocket first!");
       return;
     }
-    publishStructuredCommand(peripheral, payload, macAddress);
+    // Pass the current editableClientId to the structured publish function
+    publishStructuredCommand(peripheral, payload, macAddress, editableClientId);
     handleDeviceUpdate(peripheral, payload);
   };
 
@@ -171,11 +179,13 @@ const Main = () => {
           <ConnectionCard
             onConnect={handleConnect}
             onDisconnect={disconnectWebSocket}
+            clientIdInput={editableClientId} // Pass current value
+            setClientIdInput={setEditableClientId} // Pass setter for live updates
           />
           <SelectDevice onMacChange={setMacAddress} />
           <ControlsCard
             onPublish={handleStructuredPublish}
-            clientId={userClientId}
+            clientId={editableClientId} // Use editableClientId
             deviceState={deviceState}
             activeMac={macAddress}
             setMacAddress={setMacAddress}
@@ -183,15 +193,15 @@ const Main = () => {
           <PublisherCard
             onPublish={handlePublish}
             isConnected={isConnected}
-            clientId={userClientId}
+            clientId={editableClientId} // Use editableClientId
           />
           <SubscriberCard
             onSubscribe={handleSubscribe}
-            clientId={userClientId}
+            clientId={editableClientId} // Use editableClientId
           />
           <ReceiverCard
             messages={messages}
-            clientId={userClientId}
+            clientId={editableClientId} // Use editableClientId
             onClear={clearMessages}
           />
         </div>

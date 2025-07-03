@@ -5,7 +5,8 @@ let mqttClient = null;
 let isMqttConnected = false;
 let lastCertError = false;
 
-const DEFAULT_MQTT_SUBSCRIPTION_TOPIC = 'Forthtech/#';
+// Default subscription topic for the backend MQTT client
+const DEFAULT_MQTT_SUBSCRIPTION_TOPIC = '#'; // Subscribe to all topics for flexibility
 
 function connectWithCerts({ hostname, port, keyPath, certPath, caPath, clientId }, onConnect, onError, onMessage, ) {
     // If an existing client exists, end it clean before creating a new one
@@ -33,6 +34,7 @@ function connectWithCerts({ hostname, port, keyPath, certPath, caPath, clientId 
         lastCertError = false;
         console.log('MQTT: Client connected successfully!');
         if (mqttClient) {
+            // Subscribe to the default topic when connected
             mqttClient.subscribe(DEFAULT_MQTT_SUBSCRIPTION_TOPIC, (err) => {
                 if (err) {
                     console.error(`MQTT: Error subscribing to default topic ${DEFAULT_MQTT_SUBSCRIPTION_TOPIC}:`, err);

@@ -6,7 +6,8 @@ function useWebSocket(onDeviceUpdate) {
   const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [clientId, setClientId] = useState(''); // This will be the user's common_name
+  // clientId is now managed by Main.jsx and passed into connectWebSocket
+  // We no longer have a local clientId state in useWebSocket
   const [subscribedTopics, setSubscribedTopics] = useState([]);
   const subscribedTopicsRef = useRef([]);
 
@@ -67,8 +68,10 @@ function useWebSocket(onDeviceUpdate) {
       });
   };
 
-  const connectWebSocket = (host, port, clientIdInput) => {
-    setClientId(clientIdInput); // Set the clientId received from ConnectionCard/Main
+  // clientId is now passed as an argument
+  const connectWebSocket = (host, port, currentClientId) => {
+    // We don't set a local clientId state here anymore.
+    // The currentClientId passed from Main.jsx is used for the WebSocket connection.
 
     const socket = new WebSocket(`${import.meta.env.VITE_BACKEND_WS_URL}`);
 
@@ -209,7 +212,7 @@ function useWebSocket(onDeviceUpdate) {
   };
 
   // Function for structured commands (e.g., from ControlsCard)
-  const publishStructuredCommand = (peripheral, commandPayload, macAddress) => {
+  const publishStructuredCommand = (peripheral, commandPayload, macAddress, currentClientId) => {
     if (!isConnected) {
       showToast('error', 'WebSocket not connected. Cannot send command.');
       return;
@@ -217,11 +220,11 @@ function useWebSocket(onDeviceUpdate) {
 
     let topic;
     if (macAddress && macAddress.trim() !== '') {
-      // If MAC address is selected, topic is Forthtech/{MAC_ADDRESS}
-      topic = `Forthtech/${macAddress}`;
+      // If MAC address is selected, topic is {clientId}/{MAC_ADDRESS}
+      topic = `${currentClientId}/${macAddress}`; // Changed from Forthtech/{MAC_ADDRESS}
     } else {
       // If no MAC address is selected, topic is {clientId}
-      topic = `${clientId}`;
+      topic = `${currentClientId}`;
     }
 
     // The message payload will contain the peripheral and its command
@@ -311,7 +314,7 @@ function useWebSocket(onDeviceUpdate) {
   return {
     ws,
     isConnected,
-    clientId,
+    // Removed clientId from here as it's now passed as an argument to connectWebSocket
     messages,
     setMessages,
     connectWebSocket,
