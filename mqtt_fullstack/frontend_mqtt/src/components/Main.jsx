@@ -1,5 +1,5 @@
 // src/components/Main.jsx
-import React, { useState, useCallback, useEffect, useRef } from "react"; // Import useRef
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import useWebSocket from "../hooks/useWebSocket";
 import ConnectionCard from "./ConnectionCard";
 import ControlsCard from "./ControlsCard";
@@ -16,13 +16,6 @@ const Main = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [macAddress, setMacAddress] = useState(
-    localStorage.getItem("activeMac") || ""
-  );
-  // Centralized state for the editable client ID
-  const [editableClientId, setEditableClientId] = useState(user?.common_name || "");
-  const debounceTimeoutRef = useRef(null); // Ref for debounce timeout
-
   const [deviceState, setDeviceState] = useState({
     laser: false,
     light: false,
@@ -32,16 +25,26 @@ const Main = () => {
     tilt: 0,
   });
 
-  useEffect(() => {
-    // Initialize editableClientId when user data loads, but only if it's not already edited
-    if (user && user.common_name && !editableClientId) {
-      setEditableClientId(user.common_name);
-    } else if (!user) {
-      setEditableClientId(""); // Clear on logout
-    }
-  }, [user]); // Removed editableClientId from dependencies to prevent re-setting if user types
+  const [macAddress, setMacAddress] = useState(
+    localStorage.getItem("activeMac") || ""
+  );
+  const [editableClientId, setEditableClientId] = useState(user?.common_name || "");
+  const [userAssignedMacs, setUserAssignedMacs] = useState([]);
+  const debounceTimeoutRef = useRef(null);
 
-  // Debounce the client ID change notification
+  useEffect(() => {
+    if (user) {
+      if (!editableClientId) {
+        setEditableClientId(user.common_name);
+      }
+      const fetchedMacs = user.mac_addresses || [];
+      setUserAssignedMacs(fetchedMacs);
+    } else {
+      setEditableClientId("");
+      setUserAssignedMacs([]);
+    }
+  }, [user]);
+
   const handleClientIdChange = (newClientId) => {
     setEditableClientId(newClientId);
 
@@ -51,7 +54,7 @@ const Main = () => {
 
     debounceTimeoutRef.current = setTimeout(() => {
       showToast('info', `Client ID updated to: ${newClientId}`);
-    }, 1000); // 1 second debounce
+    }, 1000);
   };
 
   const handleDeviceUpdate = useCallback((peripheral, messagePayload) => {
@@ -89,7 +92,7 @@ const Main = () => {
       }
       return newState;
     });
-  }, []);
+  }, [deviceState]);
 
   const {
     ws,
@@ -105,7 +108,6 @@ const Main = () => {
   } = useWebSocket(handleDeviceUpdate);
 
   const handleConnect = (host, port, clientIdFromInput) => {
-    // Pass the currently edited clientIdInput to connectWebSocket
     connectWebSocket(host, port, clientIdFromInput);
   };
 
@@ -146,14 +148,17 @@ const Main = () => {
       return;
     }
     publishRaw(topic, stringifiedPayload);
-    // The peripheral is now inside the message for structured commands,
-    // but for raw publishes, it might still be part of the topic if user puts it there.
-    // This logic might need refinement depending on expected raw publish formats.
-    const peripheral = topic.split('/').pop(); // Assumes last part of topic is peripheral for raw
-    if (parsedPayload.peripheral) { // Prefer peripheral from payload if it exists
-      handleDeviceUpdate(parsedPayload.peripheral, parsedPayload);
-    } else if (peripheral) {
-      handleDeviceUpdate(peripheral, parsedPayload);
+    const peripheral = topic.split('/').pop();
+    
+    try {
+      if (parsedPayload.peripheral) {
+        handleDeviceUpdate(parsedPayload.peripheral, parsedPayload);
+      } else if (peripheral) {
+        handleDeviceUpdate(peripheral, parsedPayload);
+      }
+    } catch (error) {
+      console.error("handlePublish: Error calling handleDeviceUpdate:", error);
+      showToast("error", "Error processing device update after publish.");
     }
   };
 
@@ -162,9 +167,14 @@ const Main = () => {
       showToast("error", "Please connect to WebSocket first!");
       return;
     }
-    // Pass the current editableClientId to the structured publish function
     publishStructuredCommand(peripheral, payload, macAddress, editableClientId);
-    handleDeviceUpdate(peripheral, payload);
+    
+    try {
+      handleDeviceUpdate(peripheral, payload);
+    } catch (error) {
+      console.error("handleStructuredPublish: Error calling handleDeviceUpdate:", error);
+      showToast("error", "Error processing device update after structured publish.");
+    }
   };
 
   const handleLogout = () => {
@@ -193,13 +203,16 @@ const Main = () => {
           <ConnectionCard
             onConnect={handleConnect}
             onDisconnect={disconnectWebSocket}
-            clientIdInput={editableClientId} // Pass current value
-            setClientIdInput={handleClientIdChange} // Pass the debounced handler
+            clientIdInput={editableClientId}
+            setClientIdInput={handleClientIdChange}
           />
-          <SelectDevice onMacChange={setMacAddress} />
+          <SelectDevice
+            onMacChange={setMacAddress}
+            initialMacAddresses={userAssignedMacs}
+          />
           <ControlsCard
             onPublish={handleStructuredPublish}
-            clientId={editableClientId} // Use editableClientId
+            clientId={editableClientId}
             deviceState={deviceState}
             activeMac={macAddress}
             setMacAddress={setMacAddress}
@@ -207,15 +220,15 @@ const Main = () => {
           <PublisherCard
             onPublish={handlePublish}
             isConnected={isConnected}
-            clientId={editableClientId} // Use editableClientId
+            clientId={editableClientId}
           />
           <SubscriberCard
             onSubscribe={handleSubscribe}
-            clientId={editableClientId} // Use editableClientId
+            clientId={editableClientId}
           />
           <ReceiverCard
             messages={messages}
-            clientId={editableClientId} // Use editableClientId
+            clientId={editableClientId}
             onClear={clearMessages}
           />
         </div>
