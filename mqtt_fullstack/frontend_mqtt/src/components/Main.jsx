@@ -1,5 +1,5 @@
 // src/components/Main.jsx
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react"; // Import useRef
 import useWebSocket from "../hooks/useWebSocket";
 import ConnectionCard from "./ConnectionCard";
 import ControlsCard from "./ControlsCard";
@@ -21,6 +21,7 @@ const Main = () => {
   );
   // Centralized state for the editable client ID
   const [editableClientId, setEditableClientId] = useState(user?.common_name || "");
+  const debounceTimeoutRef = useRef(null); // Ref for debounce timeout
 
   const [deviceState, setDeviceState] = useState({
     laser: false,
@@ -38,7 +39,20 @@ const Main = () => {
     } else if (!user) {
       setEditableClientId(""); // Clear on logout
     }
-  }, [user, editableClientId]); // Depend on editableClientId to avoid re-setting if user types
+  }, [user]); // Removed editableClientId from dependencies to prevent re-setting if user types
+
+  // Debounce the client ID change notification
+  const handleClientIdChange = (newClientId) => {
+    setEditableClientId(newClientId);
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      showToast('info', `Client ID updated to: ${newClientId}`);
+    }, 1000); // 1 second debounce
+  };
 
   const handleDeviceUpdate = useCallback((peripheral, messagePayload) => {
     setDeviceState((prev) => {
@@ -180,7 +194,7 @@ const Main = () => {
             onConnect={handleConnect}
             onDisconnect={disconnectWebSocket}
             clientIdInput={editableClientId} // Pass current value
-            setClientIdInput={setEditableClientId} // Pass setter for live updates
+            setClientIdInput={handleClientIdChange} // Pass the debounced handler
           />
           <SelectDevice onMacChange={setMacAddress} />
           <ControlsCard

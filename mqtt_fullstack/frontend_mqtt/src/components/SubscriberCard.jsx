@@ -30,17 +30,17 @@ function SubscriberCard({ onSubscribe, clientId }) {
       return;
     }
 
-    // Subscribe to all Forthtech topics (for structured device commands with MAC)
-    const forthtechWildcardTopic = `Forthtech/#`;
-    onSubscribe(forthtechWildcardTopic);
-    showToast("success", `Subscribed to all Forthtech topics: ${forthtechWildcardTopic}`);
+    // Removed subscription to Forthtech/# as per request
+    // const forthtechWildcardTopic = `Forthtech/#`;
+    // onSubscribe(forthtechWildcardTopic);
+    // showToast("success", `Subscribed to all Forthtech topics: ${forthtechWildcardTopic}`);
 
-    // Also subscribe to all client-specific topics (for raw publishes and structured commands without MAC)
+    // Only subscribe to client-specific topics
     const clientWildcardTopic = `${clientId}/#`;
     onSubscribe(clientWildcardTopic);
     showToast("success", `Subscribed to all your client-specific topics: ${clientWildcardTopic}`);
 
-    setTopicSuffix('#'); // Set suffix for display, though two subscriptions are made
+    setTopicSuffix('#'); // Set suffix for display
   };
 
   return (

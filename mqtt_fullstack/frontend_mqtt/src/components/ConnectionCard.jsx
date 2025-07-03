@@ -20,6 +20,7 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
   const clientKeyRef = useRef(null);
   const clientCertRef = useRef(null);
   const caCertRef = useRef(null);
+  const toastShownRef = useRef(false); // Ref to track if toast has been shown
 
   const toggleAccordion = () => setIsOpen(!isOpen);
 
@@ -27,7 +28,9 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
     if (user) {
       setHostname(import.meta.env.VITE_MQTT_HOST || 'localhost');
       setPort(import.meta.env.VITE_MQTT_PORT || '9001');
-      // Initialize clientIdInput from user.common_name only if it's not already set (e.g., by user typing)
+      
+      // Initialize clientIdInput from user.common_name only if it's not already set
+      // This ensures user edits are preserved across re-renders
       if (!clientIdInput) {
         setClientIdInput(user.common_name);
       }
@@ -36,7 +39,11 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
       setClientCert(user.client_crt || '');
       setCaCert(user.ca_cert || '');
 
-      showToast('info', 'Certificates loaded from user data. Ready to connect.');
+      // Show toast only once when user data is initially loaded
+      if (!toastShownRef.current && user.client_key && user.client_crt && user.ca_cert) {
+        showToast('info', 'Certificates loaded from user data. Ready to connect.');
+        toastShownRef.current = true;
+      }
     } else {
       setHostname('');
       setPort('');
@@ -47,6 +54,7 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
       if (clientKeyRef.current) clientKeyRef.current.value = '';
       if (clientCertRef.current) clientCertRef.current.value = '';
       if (caCertRef.current) caCertRef.current.value = '';
+      toastShownRef.current = false; // Reset for next login
     }
   }, [user, clientIdInput, setClientIdInput]); // Added clientIdInput and setClientIdInput to dependencies
 
