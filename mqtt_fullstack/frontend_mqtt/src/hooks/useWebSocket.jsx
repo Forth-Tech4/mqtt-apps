@@ -1,28 +1,69 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { showToast } from '../utils/ToastComponent';
+
+// Heartbeat configuration (client-side only sends pings, no auto-reconnect on pong timeout)
+const PING_INTERVAL = 30000; // Send ping every 30 seconds to keep connection alive if active
 
 function useWebSocket(onDeviceUpdate) {
   const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
-
   const [subscribedTopics, setSubscribedTopics] = useState([]);
   const subscribedTopicsRef = useRef([]);
+
+  const pingIntervalIdRef = useRef(null); // Ref to store the interval ID for pings
+  const wsInstanceRef = useRef(null); // Ref to hold the WebSocket instance for cleanup and direct access
+
+  // New state to store connection parameters for on-demand reconnection
+  const [connectionParams, setConnectionParams] = useState(null);
 
   useEffect(() => {
     subscribedTopicsRef.current = subscribedTopics;
   }, [subscribedTopics]);
 
+  // Function to start the ping interval
+  const startPing = useCallback(() => {
+    // Clear any existing ping interval
+    if (pingIntervalIdRef.current) {
+      clearInterval(pingIntervalIdRef.current);
+    }
+    // Set a new interval to send pings
+    pingIntervalIdRef.current = setInterval(() => {
+      if (wsInstanceRef.current && wsInstanceRef.current.readyState === WebSocket.OPEN) {
+        console.log('⬆️ SENT to server (Ping)');
+        wsInstanceRef.current.send(JSON.stringify({ action: 'ping' }));
+      } else {
+        // If WebSocket is not open, clear the interval as pings are no longer relevant
+        clearInterval(pingIntervalIdRef.current);
+        pingIntervalIdRef.current = null;
+      }
+    }, PING_INTERVAL);
+  }, []);
+
   // Function for raw publishing (e.g., from PublisherCard)
-  const publishRaw = (topic, message) => {
+  const publishRaw = async (topic, message) => {
+    // If not connected, attempt to reconnect first
     if (!isConnected) {
-      showToast('error', 'WebSocket not connected. Cannot publish message.');
-      return;
+      showToast('info', 'WebSocket disconnected. Attempting to reconnect...');
+      if (!connectionParams) {
+        showToast('error', 'Cannot reconnect: Connection parameters not available. Please connect manually first.');
+        return;
+      }
+      try {
+        await connectWebSocket(connectionParams.host, connectionParams.port, connectionParams.clientId);
+        if (!wsInstanceRef.current || wsInstanceRef.current.readyState !== WebSocket.OPEN) {
+          showToast('error', 'Reconnection failed. Please try again or connect manually.');
+          return;
+        }
+        showToast('success', 'WebSocket reconnected. Sending command...');
+      } catch (err) {
+        showToast('error', `Reconnection failed: ${err.message}`);
+        return;
+      }
     }
 
     try {
-     
-      JSON.parse(message); 
+      JSON.parse(message); // Just to check if it's valid JSON
       const messageToSend = JSON.stringify({ action: 'publish', topic, message });
 
       console.log('⬆️ SENT to server (Publish - Raw):', {
@@ -30,10 +71,9 @@ function useWebSocket(onDeviceUpdate) {
         message,
       });
 
-      ws.send(messageToSend);
+      wsInstanceRef.current.send(messageToSend);
       showToast('success', `Published raw message to ${topic}`);
 
-      // If the topic matches a subscription, add it to messages
       if (checkIfTopicIsSubscribed(topic)) {
         setMessages(prev => [
           ...prev,
@@ -51,10 +91,6 @@ function useWebSocket(onDeviceUpdate) {
     }
   };
 
-  useEffect(() => {
-    subscribedTopicsRef.current = subscribedTopics;
-  }, [subscribedTopics]);
-
   const checkIfTopicIsSubscribed = (topicToCheck) => {
       return subscribedTopicsRef.current.some(subTopic => {
           if (subTopic.endsWith('/#')) {
@@ -65,159 +101,199 @@ function useWebSocket(onDeviceUpdate) {
       });
   };
 
-  // clientId is now passed as an argument
-  const connectWebSocket = () => {
-    
+  // Make connectWebSocket async and return a Promise
+  const connectWebSocket = useCallback((host, port, currentClientId) => {
+    return new Promise((resolve, reject) => {
+      // If already connected, disconnect first to ensure a fresh connection
+      if (wsInstanceRef.current && wsInstanceRef.current.readyState === WebSocket.OPEN) {
+        disconnectWebSocket(); // This will also clear the ping interval
+      }
 
-    const socket = new WebSocket(`${import.meta.env.VITE_BACKEND_WS_URL}`);
+      // Store connection parameters for future on-demand reconnections
+      setConnectionParams({ host, port, clientId: currentClientId });
 
-    socket.onopen = () => {
-      console.log('WebSocket Connected');
-      setIsConnected(true);
-      showToast('success', 'WebSocket connected successfully');
-    };
+      const socket = new WebSocket(`${import.meta.env.VITE_BACKEND_WS_URL}`);
+      wsInstanceRef.current = socket; // Store the instance in ref
+      setWs(socket); // Also update state for re-renders if needed
 
-    socket.onmessage = (event) => {
-      try {
-        const { topic, message } = JSON.parse(event.data);
-        console.log('⬅️ RECEIVED from server:', { topic, message });
+      socket.onopen = () => {
+        console.log('WebSocket Connected');
+        setIsConnected(true);
+        showToast('success', 'WebSocket connected successfully');
+        startPing(); // Start sending pings on successful connection
+        resolve(true); // Resolve the promise on successful connection
+      };
 
-        if (checkIfTopicIsSubscribed(topic)) {
-          let parsedMessage = message;
+      socket.onmessage = (event) => {
+        try {
+          const parsedEventData = JSON.parse(event.data);
+          const { action, topic, message } = parsedEventData;
 
-          if (typeof message === 'string') {
-            try {
-              parsedMessage = JSON.parse(message);
-            } catch (err) {}
+          // Handle pong message
+          if (action === 'pong') {
+            console.log('⬅️ RECEIVED from server (Pong)');
+            // No need to restart ping here, setInterval handles it
+            return; // Don't process pong as a regular message
           }
 
-          const peripheralFromMessage = parsedMessage?.peripheral;
+          console.log('⬅️ RECEIVED from server (Message):', { topic, message });
 
-          let messageAddedOrUpdated = false;
-          setMessages(prevMessages => {
-            const newMessages = [...prevMessages];
-            for (let i = newMessages.length - 1; i >= 0; i--) {
-              const existingMsg = newMessages[i];
-              const contentMatches =
-                typeof existingMsg.message === 'object' &&
-                typeof parsedMessage === 'object' &&
-                existingMsg.message.peripheral === parsedMessage.peripheral &&
-                ((existingMsg.message.value !== undefined &&
-                  existingMsg.message.value === parsedMessage.value) ||
-                  (existingMsg.message.mode !== undefined &&
-                    existingMsg.message.mode === parsedMessage.mode));
+          if (checkIfTopicIsSubscribed(topic)) {
+            let parsedMessage = message;
 
-              if (existingMsg.local && existingMsg.topic === topic && contentMatches) {
-                newMessages[i] = {
-                  ...existingMsg,
-                  local: false,
+            if (typeof message === 'string') {
+              try {
+                parsedMessage = JSON.parse(message);
+              } catch (err) {}
+            }
+
+            const peripheralFromMessage = parsedMessage?.peripheral;
+
+            let messageAddedOrUpdated = false;
+            setMessages(prevMessages => {
+              const newMessages = [...prevMessages];
+              for (let i = newMessages.length - 1; i >= 0; i--) {
+                const existingMsg = newMessages[i];
+                const contentMatches =
+                  typeof existingMsg.message === 'object' &&
+                  typeof parsedMessage === 'object' &&
+                  existingMsg.message.peripheral === parsedMessage.peripheral &&
+                  ((existingMsg.message.value !== undefined &&
+                    existingMsg.message.value === parsedMessage.value) ||
+                    (existingMsg.message.mode !== undefined &&
+                      existingMsg.message.mode === parsedMessage.mode));
+
+                if (existingMsg.local && existingMsg.topic === topic && contentMatches) {
+                  newMessages[i] = {
+                    ...existingMsg,
+                    local: false,
+                    timestamp: Date.now(),
+                  };
+                  console.log('🔄 Updated local message to server-confirmed:', newMessages[i]);
+                  messageAddedOrUpdated = true;
+                  break;
+                }
+              }
+
+              if (!messageAddedOrUpdated) {
+                const newMessage = {
+                  topic,
+                  message: parsedMessage,
                   timestamp: Date.now(),
+                  local: false,
                 };
-                console.log('🔄 Updated local message to server-confirmed:', newMessages[i]);
+                console.log('✅ Adding NEW SERVER message to state:', newMessage);
+                newMessages.push(newMessage);
                 messageAddedOrUpdated = true;
-                break;
+              }
+              return newMessages;
+            });
+
+            let statusMessage = '';
+            if (typeof parsedMessage === 'object' && parsedMessage.peripheral) {
+              const receivedPeripheral = parsedMessage.peripheral;
+              switch (receivedPeripheral) {
+                case 'pan':
+                case 'tilt':
+                  if (parsedMessage.value !== undefined) {
+                    statusMessage = `${receivedPeripheral.charAt(0).toUpperCase() + receivedPeripheral.slice(1)} set to ${parsedMessage.value}°`;
+                  }
+                  break;
+                case 'buzzer':
+                  if (parsedMessage.mode) {
+                    statusMessage = `Buzzer mode set to: ${parsedMessage.mode}`;
+                  }
+                  break;
+                case 'light':
+                case 'laser':
+                case 'water':
+                  if (parsedMessage.value !== undefined) {
+                    statusMessage = `${receivedPeripheral.charAt(0).toUpperCase() + receivedPeripheral.slice(1)} turned ${parsedMessage.value ? 'ON' : 'OFF'}`;
+                  }
+                  break;
+                default:
+                  statusMessage = `Received message for "${receivedPeripheral}": ${JSON.stringify(parsedMessage)}`;
+                  break;
               }
             }
 
-            if (!messageAddedOrUpdated) {
-              const newMessage = {
-                topic,
-                message: parsedMessage,
-                timestamp: Date.now(),
-                local: false,
-              };
-              console.log('✅ Adding NEW SERVER message to state:', newMessage);
-              newMessages.push(newMessage);
-              messageAddedOrUpdated = true;
+            if (statusMessage) {
+              showToast('success', statusMessage);
             }
-            return newMessages;
-          });
 
-          let statusMessage = '';
-          if (typeof parsedMessage === 'object' && parsedMessage.peripheral) {
-            const receivedPeripheral = parsedMessage.peripheral; // This is correctly defined
-            switch (receivedPeripheral) {
-              case 'pan':
-              case 'tilt':
-                if (parsedMessage.value !== undefined) {
-                  statusMessage = `${receivedPeripheral.charAt(0).toUpperCase() + receivedPeripheral.slice(1)} set to ${parsedMessage.value}°`;
-                }
-                break;
-              case 'buzzer':
-                if (parsedMessage.mode) {
-                  statusMessage = `Buzzer mode set to: ${parsedMessage.mode}`; // Used parsedMessage.mode directly
-                }
-                break;
-              case 'light':
-              case 'laser':
-              case 'water':
-                if (parsedMessage.value !== undefined) {
-                  statusMessage = `${receivedPeripheral.charAt(0).toUpperCase() + receivedPeripheral.slice(1)} turned ${parsedMessage.value ? 'ON' : 'OFF'}`;
-                }
-                break;
-              default:
-                statusMessage = `Received message for "${receivedPeripheral}": ${JSON.stringify(parsedMessage)}`;
-                break;
-            }
+            onDeviceUpdate && onDeviceUpdate(peripheralFromMessage, parsedMessage);
+          } else {
+            console.log(`Received message for unsubscribed topic: ${topic} (will not be displayed in UI)`);
           }
 
-          if (statusMessage) {
-            showToast('success', statusMessage);
-          }
-
-          onDeviceUpdate && onDeviceUpdate(peripheralFromMessage, parsedMessage);
-        } else {
-          console.log(`Received message for unsubscribed topic: ${topic} (will not be displayed in UI)`);
+        } catch (error) {
+          console.error("❌ Failed to parse WebSocket message:", error);
+          showToast('error', `Failed to parse incoming message: ${error.message}`);
         }
+      };
 
-      } catch (error) {
-        console.error("❌ Failed to parse WebSocket message:", error);
-        showToast('error', `Failed to parse incoming message: ${error.message}`);
-      }
-    };
+      socket.onerror = (err) => {
+        console.error('WebSocket Error:', err);
+        showToast('error', 'WebSocket error');
+        reject(err); // Reject the promise on connection error
+      };
 
-    socket.onerror = (err) => {
-      console.error('WebSocket Error:', err);
-      showToast('error', 'WebSocket error');
-    };
-
-    socket.onclose = () => {
-      console.log('WebSocket Disconnected');
-      setIsConnected(false);
-      setSubscribedTopics([]);
-      subscribedTopicsRef.current = [];
-      setMessages([]);
-      showToast('info', 'Disconnected from WebSocket.');
-    };
-
-    setWs(socket);
-  };
+      socket.onclose = () => {
+        console.log('WebSocket Disconnected');
+        setIsConnected(false);
+        setSubscribedTopics([]);
+        subscribedTopicsRef.current = [];
+        setMessages([]);
+        if (pingIntervalIdRef.current) {
+          clearInterval(pingIntervalIdRef.current); // Clear ping interval on close
+          pingIntervalIdRef.current = null;
+        }
+        showToast('info', 'Disconnected from WebSocket.');
+        // No reject here, as close can be a normal event (e.g., manual disconnect)
+      };
+    });
+  }, [startPing, onDeviceUpdate]); // Dependencies for useCallback
 
   const subscribeTopic = (topic) => {
     console.log("📥 Subscribing to topic:", topic);
 
-    if (ws?.readyState !== WebSocket.OPEN) {
+    if (wsInstanceRef.current?.readyState !== WebSocket.OPEN) {
       showToast('error', 'WebSocket not connected. Please connect first.');
       return;
     }
     console.log('⬆️ SENT to server (Subscribe):', { action: 'subscribe', topic });
 
-    ws.send(JSON.stringify({ action: 'subscribe', topic }));
+    wsInstanceRef.current.send(JSON.stringify({ action: 'subscribe', topic }));
     setSubscribedTopics(prev => [...prev, topic]);
     showToast('info', `Subscribed to topic: ${topic}`);
   };
 
   // Function for structured commands (e.g., from ControlsCard)
-  const publishStructuredCommand = (peripheral, commandPayload, macAddress, currentClientId) => {
+  const publishStructuredCommand = async (peripheral, commandPayload, macAddress, currentClientId) => {
+    // If not connected, attempt to reconnect first
     if (!isConnected) {
-      showToast('error', 'WebSocket not connected. Cannot send command.');
-      return;
+      showToast('info', 'WebSocket disconnected. Attempting to reconnect...');
+      if (!connectionParams) {
+        showToast('error', 'Cannot reconnect: Connection parameters not available. Please connect manually first.');
+        return;
+      }
+      try {
+        await connectWebSocket(connectionParams.host, connectionParams.port, connectionParams.clientId);
+        if (!wsInstanceRef.current || wsInstanceRef.current.readyState !== WebSocket.OPEN) {
+          showToast('error', 'Reconnection failed. Please try again or connect manually.');
+          return;
+        }
+        showToast('success', 'WebSocket reconnected. Sending command...');
+      } catch (err) {
+        showToast('error', `Reconnection failed: ${err.message}`);
+        return;
+      }
     }
 
     let topic;
     if (macAddress && macAddress.trim() !== '') {
       // If MAC address is selected, topic is {clientId}/{MAC_ADDRESS}
-      topic = `${currentClientId}/${macAddress}`; // Changed from Forthtech/{MAC_ADDRESS}
+      topic = `${currentClientId}/${macAddress}`;
     } else {
       // If no MAC address is selected, topic is {clientId}
       topic = `${currentClientId}`;
@@ -275,16 +351,16 @@ function useWebSocket(onDeviceUpdate) {
       return;
     }
 
-    if (ws?.readyState === WebSocket.OPEN) {
+    if (wsInstanceRef.current?.readyState === WebSocket.OPEN) {
       const messageToSend = JSON.stringify({ action: 'publish', topic, message: JSON.stringify(message) });
       console.log('⬆️ SENT to server (Publish Structured):', JSON.parse(messageToSend));
-      ws.send(messageToSend);
+      wsInstanceRef.current.send(messageToSend);
       showToast('success', `Command sent to topic "${topic}" for peripheral "${peripheral}"`);
 
       if (checkIfTopicIsSubscribed(topic)) {
         setMessages(prev => [...prev, {
           topic,
-          message, 
+          message, // Use the parsed message object for display
           timestamp: Date.now(),
           local: true
         }]);
@@ -292,25 +368,41 @@ function useWebSocket(onDeviceUpdate) {
     }
   };
 
-  const disconnectWebSocket = () => {
-    ws?.close();
+  const disconnectWebSocket = useCallback(() => {
+    if (wsInstanceRef.current) {
+      wsInstanceRef.current.close();
+    }
     setIsConnected(false);
     setSubscribedTopics([]);
     subscribedTopicsRef.current = [];
     setMessages([]);
-  };
+    if (pingIntervalIdRef.current) {
+      clearInterval(pingIntervalIdRef.current);
+      pingIntervalIdRef.current = null;
+    }
+    // showToast('info', 'Disconnected from WebSocket.'); // Removed to avoid double toast on auto-disconnect
+  }, []); // No dependencies for useCallback, as it only uses refs
 
   const clearMessages = () => {
     console.log('🗑️ Clearing all messages from state.');
     setMessages([]);
   };
 
-  useEffect(() => () => ws?.close(), [ws]);
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (pingIntervalIdRef.current) {
+        clearInterval(pingIntervalIdRef.current);
+      }
+      if (wsInstanceRef.current) {
+        wsInstanceRef.current.close();
+      }
+    };
+  }, []);
 
   return {
     ws,
     isConnected,
-    // Removed clientId from here as it's now passed as an argument to connectWebSocket
     messages,
     setMessages,
     connectWebSocket,

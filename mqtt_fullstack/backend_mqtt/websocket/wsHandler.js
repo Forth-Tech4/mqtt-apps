@@ -9,13 +9,15 @@ function initWebSocket(server) {
 
     wss.on('connection', (ws) => {
         console.log('WebSocket: New client connected.');
-        ws.subscribedTopics = new Set(); 
+        ws.subscribedTopics = new Set();
+        // Removed ws.isAlive and server-side pong listener as server will not actively ping clients
+
         if (!isConnected()) {
             const error = hadLastCertError()
                 ? 'Certificate authentication failed. Check client.key, client.crt, or ca.crt.'
                 : 'MQTT broker is not connected.';
             console.warn(`WebSocket: Rejecting connection due to MQTT status: ${error}`);
-            ws.send(JSON.stringify({ type: 'error', message: error })); 
+            ws.send(JSON.stringify({ type: 'error', message: error }));
             ws.close();
             return;
         }
@@ -26,14 +28,16 @@ function initWebSocket(server) {
                 const msg = JSON.parse(data);
 
                 if (msg.action === 'subscribe') {
-             
                     ws.subscribedTopics.add(msg.topic);
                     console.log(`WebSocket: Client subscribing to topic: ${msg.topic}`);
                     subscribe(msg.topic);
                 } else if (msg.action === 'publish') {
                     console.log(`WebSocket: Client publishing to topic: ${msg.topic}, message: ${msg.message}`);
                     publish(msg.topic, msg.message);
-                } else {
+                }
+                // Removed the 'else if (msg.action === 'ping')' block.
+                // The server will no longer send 'pong' in response to client 'ping' messages.
+                else {
                     console.warn('WebSocket: Unknown action received:', msg.action);
                 }
             } catch (e) {
@@ -50,6 +54,9 @@ function initWebSocket(server) {
             console.error('WebSocket: Client error:', error.message);
         });
     });
+
+    // Removed the server-side setInterval for pinging clients and terminating inactive ones.
+    // The server will now be passive regarding client liveness.
 }
 
 function topicMatches(subscribedTopic, actualTopic) {
@@ -66,7 +73,6 @@ function broadcast(payload) {
     console.log(`WebSocket: Broadcasting MQTT message to connected clients for topic: ${topic}`);
 
     wss.clients.forEach((client) => {
-        // E client is open, has subscribedTopics, and at least one topic matches
         if (
             client.readyState === WebSocket.OPEN &&
             client.subscribedTopics &&
