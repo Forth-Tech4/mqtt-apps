@@ -17,7 +17,8 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:5174",
     "https://mqttgimble.netlify.app",
-    "https://mqttgimbletesting.netlify.app"
+    "https://mqttgimbletesting.netlify.app",
+    "https://mqtt-apps-nayan-mqtt-fronted.onrender.com"
   ],
   credentials: true
 }));
