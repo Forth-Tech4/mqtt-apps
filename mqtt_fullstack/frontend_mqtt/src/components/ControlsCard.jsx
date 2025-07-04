@@ -16,7 +16,7 @@ function ControlsCard({ onPublish, clientId, deviceState, activeMac, setMacAddre
       showToast('error', 'Not connected. Please connect first.');
       return;
     }
-    console.log(activeMac)
+   
     onPublish(peripheral, payload);
   };
 

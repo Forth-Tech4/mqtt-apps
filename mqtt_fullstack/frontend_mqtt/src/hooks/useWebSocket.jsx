@@ -1,4 +1,3 @@
-// src/hooks/useWebSocket.js
 import { useState, useEffect, useRef } from 'react';
 import { showToast } from '../utils/ToastComponent';
 
@@ -6,8 +5,7 @@ function useWebSocket(onDeviceUpdate) {
   const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
-  // clientId is now managed by Main.jsx and passed into connectWebSocket
-  // We no longer have a local clientId state in useWebSocket
+
   const [subscribedTopics, setSubscribedTopics] = useState([]);
   const subscribedTopicsRef = useRef([]);
 
@@ -23,9 +21,8 @@ function useWebSocket(onDeviceUpdate) {
     }
 
     try {
-      // Validate if message is a JSON string, but don't parse it here
-      // The backend expects a string, and we're sending what the user typed.
-      JSON.parse(message); // Just to check if it's valid JSON
+     
+      JSON.parse(message); 
       const messageToSend = JSON.stringify({ action: 'publish', topic, message });
 
       console.log('⬆️ SENT to server (Publish - Raw):', {
@@ -69,9 +66,8 @@ function useWebSocket(onDeviceUpdate) {
   };
 
   // clientId is now passed as an argument
-  const connectWebSocket = (host, port, currentClientId) => {
-    // We don't set a local clientId state here anymore.
-    // The currentClientId passed from Main.jsx is used for the WebSocket connection.
+  const connectWebSocket = () => {
+    
 
     const socket = new WebSocket(`${import.meta.env.VITE_BACKEND_WS_URL}`);
 
@@ -139,7 +135,7 @@ function useWebSocket(onDeviceUpdate) {
 
           let statusMessage = '';
           if (typeof parsedMessage === 'object' && parsedMessage.peripheral) {
-            const receivedPeripheral = parsedMessage.peripheral;
+            const receivedPeripheral = parsedMessage.peripheral; // This is correctly defined
             switch (receivedPeripheral) {
               case 'pan':
               case 'tilt':
@@ -149,7 +145,7 @@ function useWebSocket(onDeviceUpdate) {
                 break;
               case 'buzzer':
                 if (parsedMessage.mode) {
-                  statusMessage = `Buzzer mode set to: ${parsedPeripheral.mode}`;
+                  statusMessage = `Buzzer mode set to: ${parsedMessage.mode}`; // Used parsedMessage.mode directly
                 }
                 break;
               case 'light':
@@ -288,7 +284,7 @@ function useWebSocket(onDeviceUpdate) {
       if (checkIfTopicIsSubscribed(topic)) {
         setMessages(prev => [...prev, {
           topic,
-          message, // Use the parsed message object for display
+          message, 
           timestamp: Date.now(),
           local: true
         }]);
