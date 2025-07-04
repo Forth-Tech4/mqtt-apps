@@ -5,7 +5,7 @@ import { faAngleDown, faAngleUp } from '@fortawesome/free-solid-svg-icons';
 import { showToast } from '../utils/ToastComponent';
 import { useAuth } from '../context/AuthContext';
 
-function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInput }) { // Added clientIdInput and setClientIdInput props
+function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInput }) {
   const { user } = useAuth();
 
   const [hostname, setHostname] = useState('');
@@ -21,6 +21,7 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
   const clientCertRef = useRef(null);
   const caCertRef = useRef(null);
   const toastShownRef = useRef(false); // Ref to track if toast has been shown
+  const isClientIdInitialized = useRef(false); // NEW: Ref to track if clientIdInput has been set initially
 
   const toggleAccordion = () => setIsOpen(!isOpen);
 
@@ -29,10 +30,12 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
       setHostname(import.meta.env.VITE_MQTT_HOST || 'localhost');
       setPort(import.meta.env.VITE_MQTT_PORT || '9001');
       
-      // Initialize clientIdInput from user.common_name only if it's not already set
-      // This ensures user edits are preserved across re-renders
-      if (!clientIdInput) {
+      // Initialize clientIdInput from user.common_name only if it hasn't been set before
+      // or if the user object changes and we haven't initialized it yet.
+      // This ensures user edits are preserved across re-renders.
+      if (!isClientIdInitialized.current) {
         setClientIdInput(user.common_name);
+        isClientIdInitialized.current = true;
       }
 
       setClientKey(user.client_key || '');
@@ -45,6 +48,7 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
         toastShownRef.current = true;
       }
     } else {
+      // On logout, reset all states
       setHostname('');
       setPort('');
       setClientIdInput(''); // Clear clientIdInput on logout
@@ -55,8 +59,9 @@ function ConnectionCard({ onConnect, onDisconnect, clientIdInput, setClientIdInp
       if (clientCertRef.current) clientCertRef.current.value = '';
       if (caCertRef.current) caCertRef.current.value = '';
       toastShownRef.current = false; // Reset for next login
+      isClientIdInitialized.current = false; // Reset for next login
     }
-  }, [user, clientIdInput, setClientIdInput]); // Added clientIdInput and setClientIdInput to dependencies
+  }, [user, setClientIdInput]); // Removed clientIdInput from dependencies to avoid loop, keep setClientIdInput as it's a prop.
 
   const handleConnect = async () => {
     if (!hostname || !port) {
