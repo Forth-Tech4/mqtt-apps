@@ -1,17 +1,40 @@
+// ✅ Enhanced useWebSocket.js with perfect auto-reconnect functionality
 import { useState, useEffect, useRef } from 'react';
 import { showToast } from '../utils/ToastComponent';
 
-function useWebSocket(onDeviceUpdate) {
+function useWebSocket(onDeviceUpdate, userClientId) {
   const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [clientId, setClientId] = useState('Forthtech');
   const [subscribedTopics, setSubscribedTopics] = useState([]);
   const subscribedTopicsRef = useRef([]);
+  
+  // Connection state management
+  const [connectionCredentials, setConnectionCredentials] = useState(null);
+  const [isManuallyDisconnected, setIsManuallyDisconnected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const autoDisconnectTimerRef = useRef(null);
+  const wsRef = useRef(null);
+  const isConnectedRef = useRef(false);
+  const reconnectPromiseRef = useRef(null);
 
   useEffect(() => {
     subscribedTopicsRef.current = subscribedTopics;
   }, [subscribedTopics]);
+
+  useEffect(() => {
+    wsRef.current = ws;
+  }, [ws]);
+
+  useEffect(() => {
+    isConnectedRef.current = isConnected;
+  }, [isConnected]);
+
+  // Clear auto-disconnect timer
+  const clearAutoDisconnectTimer = () => {
+    clearTimeout(autoDisconnectTimerRef.current);
+  };
 
   const checkIfTopicIsSubscribed = (topicToCheck) => {
     return subscribedTopicsRef.current.some(subTopic => {
@@ -23,9 +46,162 @@ function useWebSocket(onDeviceUpdate) {
     });
   };
 
-  const publishToTopic = (topic, message) => {
-    if (!isConnected) {
-      showToast('error', 'WebSocket not connected. Cannot publish message.');
+  // Enhanced auto-reconnect function with proper promise handling
+  const attemptReconnect = () => {
+    if (!connectionCredentials || isManuallyDisconnected) {
+      return Promise.reject(new Error('Cannot reconnect - no credentials or manually disconnected'));
+    }
+
+    // If already reconnecting, return the existing promise
+    if (reconnectPromiseRef.current) {
+      return reconnectPromiseRef.current;
+    }
+
+    setIsReconnecting(true);
+    showToast('info', 'Attempting to reconnect...');
+
+    reconnectPromiseRef.current = new Promise((resolve, reject) => {
+      const { host, port, clientIdInput } = connectionCredentials;
+      // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);
+      const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);
+      
+      const connectionTimeout = setTimeout(() => {
+        socket.close();
+        cleanup();
+        reject(new Error('Connection timeout'));
+      }, 5000);
+
+      const cleanup = () => {
+        clearTimeout(connectionTimeout);
+        setIsReconnecting(false);
+        reconnectPromiseRef.current = null;
+      };
+
+      socket.onopen = () => {
+        console.log('✅ WebSocket Reconnected Successfully');
+        
+        // Update refs immediately for synchronous access
+        wsRef.current = socket;
+        isConnectedRef.current = true;
+        
+        // Update state
+        setWs(socket);
+        setIsConnected(true);
+        setClientId(clientIdInput);
+        
+        // Auto-subscribe to default topic
+        const defaultTopic = `${clientIdInput}/#`;
+        const subscribeMsg = { action: 'subscribe', topic: defaultTopic };
+        console.log('⬆️ Auto-subscribing to default topic:', subscribeMsg);
+        socket.send(JSON.stringify(subscribeMsg));
+        setSubscribedTopics([defaultTopic]);
+        
+        showToast('success', 'Reconnected and auto-subscribed to default topic');
+        cleanup();
+        resolve(socket);
+      };
+
+      socket.onmessage = (event) => {
+        console.log('⬅️ RECEIVED raw data from server:', event.data);
+        try {
+          const { topic, message } = JSON.parse(event.data);
+          let parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+          const featureFromMessage = parsedMessage?.feature;
+
+          console.log('🧠 Parsed incoming message:', {
+            topic,
+            feature: featureFromMessage,
+            payload: parsedMessage
+          });
+
+          if (checkIfTopicIsSubscribed(topic)) {
+            let messageAddedOrUpdated = false;
+            setMessages(prev => {
+              const newMessages = [...prev];
+              for (let i = newMessages.length - 1; i >= 0; i--) {
+                const existingMsg = newMessages[i];
+                const matches =
+                  existingMsg.local &&
+                  existingMsg.topic === topic &&
+                  existingMsg.message?.feature === parsedMessage?.feature &&
+                  JSON.stringify(existingMsg.message) === JSON.stringify(parsedMessage);
+
+                if (matches) {
+                  console.log('🔄 Updating local message to server-confirmed:', existingMsg);
+                  newMessages[i] = { ...existingMsg, local: false, timestamp: Date.now() };
+                  messageAddedOrUpdated = true;
+                  break;
+                }
+              }
+
+              if (!messageAddedOrUpdated) {
+                const newMsg = { topic, message: parsedMessage, timestamp: Date.now(), local: false };
+                console.log('🆕 Adding new server message to state:', newMsg);
+                newMessages.push(newMsg);
+              }
+              return newMessages;
+            });
+
+            onDeviceUpdate?.(featureFromMessage, parsedMessage);
+          } else {
+            console.log(`⚠️ Topic '${topic}' is not subscribed. Ignoring message.`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to parse WebSocket message:", error);
+          showToast('error', `Failed to parse incoming message: ${error.message}`);
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.error('❌ WebSocket Reconnection Error:', err);
+        cleanup();
+        reject(err);
+      };
+
+      socket.onclose = () => {
+        console.log('⚠️ WebSocket Disconnected during reconnection');
+        wsRef.current = null;
+        isConnectedRef.current = false;
+        setIsConnected(false);
+        setSubscribedTopics([]);
+        subscribedTopicsRef.current = [];
+        clearAutoDisconnectTimer();
+        
+        if (!isManuallyDisconnected) {
+          showToast('info', 'Connection lost. Will retry on next action.');
+        }
+      };
+    });
+
+    return reconnectPromiseRef.current;
+  };
+
+  const publishToTopic = async (topic, message) => {
+    // Check if we need to reconnect first
+    if (!isConnectedRef.current && !isManuallyDisconnected) {
+      console.log('🔄 Not connected, attempting to reconnect...');
+      try {
+        await attemptReconnect();
+        // Small delay to ensure connection is fully ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        showToast('error', 'Failed to reconnect. Cannot publish message.');
+        return;
+      }
+    }
+
+    if (!isConnectedRef.current) {
+      if (isManuallyDisconnected) {
+        showToast('error', 'You manually disconnected. Please connect manually to continue.');
+      } else {
+        showToast('error', 'WebSocket not connected. Cannot publish message.');
+      }
+      return;
+    }
+
+    // Ensure WebSocket is ready
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      showToast('error', 'WebSocket is not ready. Please try again.');
       return;
     }
 
@@ -33,137 +209,93 @@ function useWebSocket(onDeviceUpdate) {
       const parsedMessage = JSON.parse(message);
       const messageToSend = JSON.stringify({ action: 'publish', topic, message });
 
-      console.log('⬆️ SENT to server (Publish - Manual):', {
+      console.log('⬆️ SENT to server (Manual Publish):', {
+        action: 'publish',
         topic,
-        parsedMessage,
+        message: parsedMessage
       });
 
-      ws.send(messageToSend);
+      wsRef.current.send(messageToSend);
 
       if (checkIfTopicIsSubscribed(topic)) {
-        setMessages(prev => [
-          ...prev,
-          {
-            topic,
-            message: parsedMessage,
-            timestamp: Date.now(),
-            local: true,
-          },
-        ]);
+        setMessages(prev => [...prev, {
+          topic,
+          message: parsedMessage,
+          timestamp: Date.now(),
+          local: true,
+        }]);
       }
 
       showToast('success', `Published to ${topic}`);
+      
     } catch (err) {
+      console.error('❌ Failed to stringify or send message:', err);
       showToast('error', 'Message must be a valid JSON string.');
-      console.error('Invalid JSON for message:', err);
     }
   };
 
-  const connectWebSocket = (host, port) => {
-    // setClientId('Forthtech');
-  
-    const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);       // for live production
-    // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);           // local development
+  const connectWebSocket = (host, port, clientIdInput) => {
+    // Store connection credentials for auto-reconnect
+    setConnectionCredentials({ host, port, clientIdInput });
+    setIsManuallyDisconnected(false);
+    setClientId(clientIdInput);
+    
+    // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);
+    const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);
 
     socket.onopen = () => {
-      console.log('WebSocket Connected');
+      console.log('✅ WebSocket Connected');
+      wsRef.current = socket;
+      isConnectedRef.current = true;
       setIsConnected(true);
       showToast('success', 'WebSocket connected successfully');
     };
 
     socket.onmessage = (event) => {
+      console.log('⬅️ RECEIVED raw data from server:', event.data);
       try {
         const { topic, message } = JSON.parse(event.data);
-        console.log('⬅️ RECEIVED from server:', { topic, message });
+        let parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+        const featureFromMessage = parsedMessage?.feature;
+
+        console.log('🧠 Parsed incoming message:', {
+          topic,
+          feature: featureFromMessage,
+          payload: parsedMessage
+        });
 
         if (checkIfTopicIsSubscribed(topic)) {
-          let parsedMessage = message;
-
-          if (typeof message === 'string') {
-            try {
-              parsedMessage = JSON.parse(message);
-            } catch (err) {}
-          }
-
-          const peripheralFromMessage = parsedMessage?.peripheral;
-
           let messageAddedOrUpdated = false;
-          setMessages(prevMessages => {
-            const newMessages = [...prevMessages];
+          setMessages(prev => {
+            const newMessages = [...prev];
             for (let i = newMessages.length - 1; i >= 0; i--) {
               const existingMsg = newMessages[i];
-              const contentMatches =
-                typeof existingMsg.message === 'object' &&
-                typeof parsedMessage === 'object' &&
-                existingMsg.message.peripheral === parsedMessage.peripheral &&
-                ((existingMsg.message.value !== undefined &&
-                  existingMsg.message.value === parsedMessage.value) ||
-                  (existingMsg.message.mode !== undefined &&
-                    existingMsg.message.mode === parsedMessage.mode));
+              const matches =
+                existingMsg.local &&
+                existingMsg.topic === topic &&
+                existingMsg.message?.feature === parsedMessage?.feature &&
+                JSON.stringify(existingMsg.message) === JSON.stringify(parsedMessage);
 
-              if (existingMsg.local && existingMsg.topic === topic && contentMatches) {
-                newMessages[i] = {
-                  ...existingMsg,
-                  local: false,
-                  timestamp: Date.now(),
-                };
-                console.log('🔄 Updated local message to server-confirmed:', newMessages[i]);
+              if (matches) {
+                console.log('🔄 Updating local message to server-confirmed:', existingMsg);
+                newMessages[i] = { ...existingMsg, local: false, timestamp: Date.now() };
                 messageAddedOrUpdated = true;
                 break;
               }
             }
 
             if (!messageAddedOrUpdated) {
-              const newMessage = {
-                topic,
-                message: parsedMessage,
-                timestamp: Date.now(),
-                local: false,
-              };
-              console.log('✅ Adding NEW SERVER message to state:', newMessage);
-              newMessages.push(newMessage);
-              messageAddedOrUpdated = true;
+              const newMsg = { topic, message: parsedMessage, timestamp: Date.now(), local: false };
+              console.log('🆕 Adding new server message to state:', newMsg);
+              newMessages.push(newMsg);
             }
             return newMessages;
           });
 
-          let statusMessage = '';
-          if (typeof parsedMessage === 'object' && parsedMessage.peripheral) {
-            const receivedPeripheral = parsedMessage.peripheral;
-            switch (receivedPeripheral) {
-              case 'pan':
-              case 'tilt':
-                if (parsedMessage.value !== undefined) {
-                  statusMessage = `${receivedPeripheral.charAt(0).toUpperCase() + receivedPeripheral.slice(1)} set to ${parsedMessage.value}°`;
-                }
-                break;
-              case 'buzzer':
-                if (parsedMessage.mode) {
-                  statusMessage = `Buzzer mode set to: ${parsedMessage.mode}`;
-                }
-                break;
-              case 'light':
-              case 'laser':
-              case 'water':
-                if (parsedMessage.value !== undefined) {
-                  statusMessage = `${receivedPeripheral.charAt(0).toUpperCase() + receivedPeripheral.slice(1)} turned ${parsedMessage.value ? 'ON' : 'OFF'}`;
-                }
-                break;
-              default:
-                statusMessage = `Received message for "${receivedPeripheral}": ${JSON.stringify(parsedMessage)}`;
-                break;
-            }
-          }
-
-          if (statusMessage) {
-            showToast('success', statusMessage);
-          }
-
-          onDeviceUpdate && onDeviceUpdate(peripheralFromMessage, parsedMessage);
+          onDeviceUpdate?.(featureFromMessage, parsedMessage);
         } else {
-          console.log(`Received message for unsubscribed topic: ${topic} (will not be displayed in UI)`);
+          console.log(`⚠️ Topic '${topic}' is not subscribed. Ignoring message.`);
         }
-
       } catch (error) {
         console.error("❌ Failed to parse WebSocket message:", error);
         showToast('error', `Failed to parse incoming message: ${error.message}`);
@@ -171,126 +303,113 @@ function useWebSocket(onDeviceUpdate) {
     };
 
     socket.onerror = (err) => {
-      console.error('WebSocket Error:', err);
+      console.error('❌ WebSocket Error:', err);
       showToast('error', 'WebSocket error');
     };
 
     socket.onclose = () => {
-      console.log('WebSocket Disconnected');
+      console.log('⚠️ WebSocket Disconnected');
+      wsRef.current = null;
+      isConnectedRef.current = false;
       setIsConnected(false);
       setSubscribedTopics([]);
       subscribedTopicsRef.current = [];
-      setMessages([]);
-      showToast('info', 'Disconnected from WebSocket.');
+      clearAutoDisconnectTimer();
+      
+      if (!isManuallyDisconnected) {
+        showToast('info', 'Connection lost. Will auto-reconnect on next action.');
+      }
     };
 
     setWs(socket);
   };
 
-  const subscribeTopic = (topic) => {
-    if (ws?.readyState !== WebSocket.OPEN) {
-      showToast('error', 'WebSocket not connected. Please connect first.');
+  const subscribeTopic = async (topic) => {
+    // Check if we need to reconnect first
+    if (!isConnectedRef.current && !isManuallyDisconnected) {
+      console.log('🔄 Not connected, attempting to reconnect...');
+      try {
+        await attemptReconnect();
+        // Small delay to ensure connection is fully ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        showToast('error', 'Failed to reconnect. Cannot subscribe to topic.');
+        return;
+      }
+    }
+
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      if (isManuallyDisconnected) {
+        showToast('error', 'You manually disconnected. Please connect manually to continue.');
+      } else {
+        showToast('error', 'WebSocket not connected. Please connect first.');
+      }
       return;
     }
-    console.log('⬆️ SENT to server (Subscribe):', { action: 'subscribe', topic });
 
-    ws.send(JSON.stringify({ action: 'subscribe', topic }));
+    const msg = { action: 'subscribe', topic };
+    console.log('⬆️ SENT to server (Subscribe):', msg);
+    wsRef.current.send(JSON.stringify(msg));
     setSubscribedTopics(prev => [...prev, topic]);
     showToast('info', `Subscribed to topic: ${topic}`);
+
   };
 
-  const publishCommand = (peripheral, commandPayload) => {
-  if (!isConnected) {
-    showToast('error', 'WebSocket not connected. Cannot send command.');
-    return;
-  }
-
-  const MAC_ADDRESS = localStorage.getItem('activeMac');
-  let topic = '';
-
-  // Check if 'peripheral' ends with 'web' and handle it
-  if (peripheral.endsWith('web')) {
-    const trimmedPeripheral = peripheral.slice(0, -3).replace(/\/+$/, ''); // remove 'web' and any trailing slash
-    topic = `${clientId}/${trimmedPeripheral}`;
-  } else {
-    topic = MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
-  }
-
-  const message = { peripheral, ...commandPayload };
-
-  let isValid = true;
-  let errorMessage = '';
-
-    switch (peripheral) {
-      case 'pan':
-        if (typeof message.value !== 'number' || message.value < 0 || message.value > 360) {
-          isValid = false;
-          errorMessage = 'Pan value must be a number between 0 and 360.';
-        }
-        break;
-      case 'tilt':
-        if (typeof message.value !== 'number' || message.value < -90 || message.value > 90) {
-          isValid = false;
-          errorMessage = 'Tilt value must be a number between -90 and 90.';
-        }
-        break;
-      case 'buzzer':
-        const validModes = ['alert', 'warning', 'notification', 'off'];
-        if (!message.mode || !validModes.includes(message.mode)) {
-          isValid = false;
-          errorMessage = `Buzzer mode must be one of: ${validModes.join(', ')}.`;
-        }
-        break;
-      case 'light':
-      case 'laser':
-      case 'water':
-        if (message.value === undefined || !(typeof message.value === 'number' || typeof message.value === 'boolean')) {
-          isValid = false;
-          errorMessage = `${peripheral} value must be 0, 1, true, or false.`;
-        } else if (typeof message.value === 'number' && ![0, 1].includes(message.value)) {
-          isValid = false;
-          errorMessage = `${peripheral} value must be 0 or 1.`;
-        }
-       if (typeof message.value === 'boolean') {
-  message.value = message.value ? 1 : 0;
-}
-        break;
-      default:
-        if (!peripheral) {
-          isValid = false;
-          errorMessage = 'Unknown peripheral.';
-        }
+  const publishCommand = async (feature, commandPayload) => {
+    // Check if we need to reconnect first
+    if (!isConnectedRef.current && !isManuallyDisconnected) {
+      console.log('🔄 Not connected, attempting to reconnect...');
+      try {
+        await attemptReconnect();
+        // Small delay to ensure connection is fully ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        showToast('error', 'Failed to reconnect. Cannot send command.');
+        return;
+      }
     }
 
-    if (!isValid) {
-      showToast('error', `Command Rejected: ${errorMessage}`);
+    if (!isConnectedRef.current) {
+      if (isManuallyDisconnected) {
+        showToast('error', 'You manually disconnected. Please connect manually to continue.');
+      }
       return;
     }
 
-    if (ws?.readyState === WebSocket.OPEN) {
-      const messageToSend = JSON.stringify({ action: 'publish', topic, message: JSON.stringify(message) });
-      console.log('⬆️ SENT to server (Publish):', JSON.parse(messageToSend));
-      ws.send(messageToSend);
-      showToast('success', `Command sent to ${peripheral}: ${JSON.stringify(commandPayload)}`);
+    // Ensure WebSocket is ready
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      showToast('error', 'WebSocket is not ready. Please try again.');
+      return;
+    }
 
-      if (checkIfTopicIsSubscribed(topic)) {
-        setMessages(prev => [...prev, {
-          topic,
-          message,
-          timestamp: Date.now(),
-          local: true
-        }]);
-      }
+    const MAC_ADDRESS = localStorage.getItem('activeMac');
+    let topic = feature.endsWith('web') ? `${clientId}/${feature.slice(0, -3).replace(/\/+$/, '')}` : MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
+
+    const message = { feature, ...commandPayload };
+    const msgToSend = { action: 'publish', topic, message: JSON.stringify(message) };
+
+    console.log('⬆️ SENT to server (Command):', {
+      topic,
+      feature,
+      payload: message
+    });
+    
+    wsRef.current.send(JSON.stringify(msgToSend));
+    showToast('success', `Command sent to ${feature}: ${JSON.stringify(commandPayload)}`);
+
+    if (checkIfTopicIsSubscribed(topic)) {
+      setMessages(prev => [...prev, { topic, message, timestamp: Date.now(), local: true }]);
     }
   };
 
   const disconnectWebSocket = () => {
-    ws?.close();
-    setIsConnected(false);
-    setSubscribedTopics([]);
-    subscribedTopicsRef.current = [];
-    setMessages([]);
-    // showToast('info', 'Disconnected from WebSocket.');
+    console.log('👋 Disconnecting WebSocket manually.');
+    setIsManuallyDisconnected(true);
+    clearAutoDisconnectTimer();
+    setConnectionCredentials(null);
+    reconnectPromiseRef.current = null;
+    wsRef.current?.close();
+    showToast('info', 'Manually disconnected. Connect manually to continue.');
   };
 
   const clearMessages = () => {
@@ -298,7 +417,14 @@ function useWebSocket(onDeviceUpdate) {
     setMessages([]);
   };
 
-  useEffect(() => () => ws?.close(), [ws]);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearAutoDisconnectTimer();
+      reconnectPromiseRef.current = null;
+      wsRef.current?.close();
+    };
+  }, []);
 
   return {
     ws,
@@ -312,6 +438,8 @@ function useWebSocket(onDeviceUpdate) {
     publishToTopic,
     disconnectWebSocket,
     clearMessages,
+    isReconnecting,
+    isManuallyDisconnected,
   };
 }
 

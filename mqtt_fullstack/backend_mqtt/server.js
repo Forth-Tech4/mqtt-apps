@@ -1,5 +1,3 @@
-
-
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -17,16 +15,13 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:5174",
     "https://mqttgimble.netlify.app",
-    "https://mqttgimbletesting.netlify.app"
+    "https://mqttgimbletesting.netlify.app",
+    "https://mqtt-apps-html-to-react-2.onrender.com"
   ],
   credentials: true
 }));
 
 app.use('/', mqttRoutes);
-
-
-
-
 initWebSocket(server);
 
 const PORT = process.env.PORT || 3001;

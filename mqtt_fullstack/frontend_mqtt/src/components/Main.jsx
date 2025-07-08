@@ -1,61 +1,50 @@
-import React, { useState, useCallback } from 'react'; // Added useCallback
-import useWebSocket from '../hooks/useWebSocket';
-import ConnectionCard from './ConnectionCard';
-import ControlsCard from './ControlsCard';
-import PublisherCard from './PublisherCard'; // PublisherCard might need review for its direct topic/payload handling
-import SubscriberCard from './SubscriberCard';
-import ReceiverCard from './ReceiverCard';
-import '../utils/fontawesome'; // Assuming this provides FontAwesome icons
-import { showToast } from '../utils/ToastComponent';
-import SelectDevice from './Selectdevice';
-
+import React, { useState, useCallback } from "react";
+import useWebSocket from "../hooks/useWebSocket";
+import ConnectionCard from "./ConnectionCard";
+import ControlsCard from "./ControlsCard";
+import PublisherCard from "./PublisherCard";
+import SubscriberCard from "./SubscriberCard";
+import ReceiverCard from "./ReceiverCard";
+import "../utils/fontawesome";
+import { showToast } from "../utils/ToastComponent";
+import SelectDevice from "./Selectdevice";
 
 const Main = () => {
-
-const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') || '');
-
-
-
-
+  const [macAddress, setMacAddress] = useState(localStorage.getItem("activeMac") || "");
+  const [userClientId, setUserClientId] = useState("");
   const [deviceState, setDeviceState] = useState({
-    laser: false, // Use boolean for ON/OFF states
-    light: false, // Changed 'led' to 'light', use boolean
-    
-    buzzer: 'off', // Use string for buzzer modes
-    water: false, // Use boolean for ON/OFF states
+    laser: false,
+    light: false,
+    buzzer: "off",
+    water: false,
     pan: 0,
     tilt: 0,
   });
 
-  // Updated handleDeviceUpdate to parse the new incoming JSON messages
-  const handleDeviceUpdate = useCallback((peripheral, messagePayload) => {
-    setDeviceState(prev => {
+  const handleDeviceUpdate = useCallback((feature, messagePayload) => {
+    setDeviceState((prev) => {
       const newState = { ...prev };
-      switch (peripheral) {
-        case 'pan':
-        case 'tilt':
-          // Assuming messagePayload for pan/tilt will be { peripheral: "pan", value: X }
-          if (messagePayload && typeof messagePayload.value === 'number') {
-            newState[peripheral] = messagePayload.value;
+      switch (feature) {
+        case "pan":
+        case "tilt":
+          if (typeof messagePayload.value === "number") newState[feature] = messagePayload.value;
+          break;
+        case "buzzer":
+          if (typeof messagePayload.mode === "string") newState.buzzer = messagePayload.mode;
+          break;
+        case "light":
+        case "laser":
+        case "water":
+          if (typeof messagePayload.value === "boolean" || typeof messagePayload.value === "number") {
+            newState[feature] = Boolean(messagePayload.value);
           }
           break;
-        case 'buzzer':
-          // Assuming messagePayload for buzzer will be { peripheral: "buzzer", mode: "alert" }
-          if (messagePayload && typeof messagePayload.mode === 'string') {
-            newState.buzzer = messagePayload.mode;
-          }
+        case "softwareupdate":
+          console.log("📦 Software update acknowledged.");
           break;
-        case 'light': // Renamed from 'led'
-        case 'laser':
-        case 'water':
-          // Assuming messagePayload for light/laser/water will be { peripheral: "light", value: 1/0/true/false }
-          if (messagePayload && (typeof messagePayload.value === 'boolean' || typeof messagePayload.value === 'number')) {
-            newState[peripheral] = Boolean(messagePayload.value); // Store as boolean
-          }
-          break;
+
         default:
-          console.warn(`Unknown or unhandled peripheral in device update: ${peripheral}`, messagePayload);
-          break;
+          console.warn(`Unhandled feature: ${feature}`);
       }
       return newState;
     });
@@ -69,115 +58,160 @@ const [macAddress, setMacAddress] = useState(localStorage.getItem('activeMac') |
     clientId,
     connectWebSocket,
     disconnectWebSocket,
-    publishCommand, // Changed from publishMessage to publishCommand
+    publishCommand,
     subscribeTopic,
-    clearMessages
-  } = useWebSocket(handleDeviceUpdate);
+    clearMessages,
+    isReconnecting,
+    isManuallyDisconnected,
+  } = useWebSocket(handleDeviceUpdate, userClientId);
 
- const handleConnect = (host, port, username) => {
-  connectWebSocket(host, port, username);
-  
-  // Auto-subscribe to the fixed topic after small delay to ensure connection
-  // setTimeout(() => {
-  //   subscribeTopic('Forthtech/10:10:10:10');
-  // }, 500);
-};
-
-  const handleSubscribe = (topic) => {
-    if (!isConnected) {
-      showToast('error', 'Please connect to WebSocket first!');
-      return;
-    }
-    if (!topic || topic.trim() === '') {
-      showToast('error', 'Please enter a valid topic to subscribe to!');
-      return;
-    }
-    subscribeTopic(topic);
+  const handleConnect = (host, port, clientIdFromInput) => {
+    connectWebSocket(host, port, clientIdFromInput);
+    setUserClientId(clientIdFromInput);
   };
 
-  // This handlePublish is for generic publishing (e.g., from PublisherCard)
-  // It now expects topic and a stringified JSON message.
-  const handlePublish = (topic, stringifiedPayload) => {
-    console.log("topic---------->",topic)
-    console.log("stringifiedPayload---------->",stringifiedPayload)
-    if (!isConnected) {
-      showToast('error', 'Please connect to WebSocket first!');
-      return;
-    }
-    if (!topic || topic.trim() === '' || !stringifiedPayload || stringifiedPayload.trim() === '') {
-      showToast('error', 'Topic and payload must not be empty!');
+  const handleSubscribe = async (topic) => {
+    if (isManuallyDisconnected) {
+      showToast("error", "You manually disconnected. Please connect manually first!");
       return;
     }
 
-    // Attempt to parse the stringifiedPayload to validate it before sending
+    if (!isConnected) {
+      showToast("info", "Not connected. Attempting to reconnect...");
+    }
+
+    if (!topic.trim()) {
+      showToast("error", "Please enter a valid topic to subscribe to!");
+      return;
+    }
+
+    await subscribeTopic(topic);
+  };
+
+  const handlePublish = async (topic, stringifiedPayload) => {
+    if (isManuallyDisconnected) {
+      showToast("error", "You manually disconnected. Please connect manually first!");
+      return;
+    }
+
+    if (!isConnected) {
+      showToast("info", "Not connected. Attempting to reconnect...");
+    }
+
+    if (!topic.trim() || !stringifiedPayload.trim()) {
+      showToast("error", "Topic and payload must not be empty!");
+      return;
+    }
+
     let parsedPayload;
     try {
-        parsedPayload = JSON.parse(stringifiedPayload);
-    } catch (e) {
-        showToast('error', 'Payload is not valid JSON. Please provide a JSON string.');
-        return;
+      parsedPayload = JSON.parse(stringifiedPayload);
+    } catch {
+      showToast("error", "Payload is not valid JSON.");
+      return;
     }
 
-    // Determine peripheral from parsedPayload or topic
-    const peripheral = topic.split('/')[1] + topic.split('/')[2] || "non-found";
+    const feature = topic.split("/")[1] + topic.split("/")[2] || "non-found";
 
-    // This is a bridge function. For structured commands, `publishCommand` is better.
-    // However, if PublisherCard needs to send arbitrary JSON, this is how.
-    // It calls the `publishCommand` from the hook, which then validates and sends.
-    publishCommand(peripheral, parsedPayload,macAddress); 
+    // Wait for potential reconnection before updating device state
+    await publishCommand(feature, parsedPayload);
 
-    handleDeviceUpdate(peripheral, parsedPayload);
-
-    // The direct UI update logic here is largely redundant if `onDeviceUpdate`
-    // correctly processes messages received from the WebSocket.
-    // Keep it if you want immediate UI feedback *before* the roundtrip to the server.
-    // Otherwise, remove it and rely solely on `onDeviceUpdate` triggered by `socket.onmessage`.
-    // For now, I'll remove the old direct UI update, assuming `onDeviceUpdate` handles it.
+    // Only update device state if still connected after publish attempt
+    if (isConnected) {
+      handleDeviceUpdate(feature, parsedPayload);
+    }
   };
 
-  const handleStructuredPublish = (peripheral, payload, mac = '') => {
-  if (!isConnected) {
-    showToast('error', 'Please connect to WebSocket first!');
-    return;
-  }
+  const handleStructuredPublish = async (feature, payload, mac = "") => {
+    if (isManuallyDisconnected) {
+      showToast("error", "You manually disconnected. Please connect manually first!");
+      return;
+    }
 
-  const targetTopic = mac ? `Forthtech/${mac}` : `Forthtech`; // ✅ Handles both specific and "all"
-  publishCommand(peripheral, payload, targetTopic);
+    if (!isConnected) {
+      showToast("info", "Not connected. Attempting to reconnect...");
+    }
 
-  handleDeviceUpdate(peripheral, payload);
-};
+    const targetTopic = mac ? `Forthtech/${mac}` : `Forthtech`;
 
+    // Wait for potential reconnection before updating device state
+    await publishCommand(feature, payload, targetTopic);
+
+    // Only update device state if still connected after publish attempt
+    if (isConnected) {
+      handleDeviceUpdate(feature, payload);
+    }
+  };
+
+  // Connection status indicator
+  const getConnectionStatus = () => {
+    if (isReconnecting) return "Reconnecting...";
+    if (isManuallyDisconnected) return "Manually Disconnected";
+    if (isConnected) return "Connected";
+    return "Disconnected";
+  };
+
+  const getConnectionStatusColor = () => {
+    if (isReconnecting) return "text-yellow-400";
+    if (isManuallyDisconnected) return "text-red-400";
+    if (isConnected) return "text-green-400";
+    return "text-gray-400";
+  };
 
   return (
     <div className="bg-zinc-800 font-sans p-5 min-h-screen">
       <div className="max-w-4xl mx-auto">
+        {/* Connection Status Banner */}
+        <div className="mb-4 p-3 bg-zinc-700 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : isReconnecting ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+              <span className={`font-medium ${getConnectionStatusColor()}`}>
+                {getConnectionStatus()}
+              </span>
+            </div>
+            {isReconnecting && (
+              <div className="text-sm text-gray-400">
+                Auto-reconnecting on user action...
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-8">
           <ConnectionCard
             onConnect={handleConnect}
             onDisconnect={disconnectWebSocket}
-            setClientId={() => {}} // This seems unused or needs clarification
+            setClientId={setUserClientId}
+            isReconnecting={isReconnecting}
+            isManuallyDisconnected={isManuallyDisconnected}
           />
           <SelectDevice onMacChange={setMacAddress} />
-
           <ControlsCard
-             onPublish={handleStructuredPublish}
-            clientId={clientId}
+            onPublish={handleStructuredPublish}
+            clientId={userClientId}
             deviceState={deviceState}
             activeMac={macAddress}
-            setMacAddress={setMacAddress} // Pass the setter to update macAddress
+            setMacAddress={setMacAddress}
+            isReconnecting={isReconnecting}
+            isManuallyDisconnected={isManuallyDisconnected}
           />
           <PublisherCard
-            onPublish={handlePublish} // This one remains for generic stringified JSON publishing
+            onPublish={handlePublish}
             isConnected={isConnected}
-            clientId={clientId}
+            clientId={userClientId}
+            isReconnecting={isReconnecting}
+            isManuallyDisconnected={isManuallyDisconnected}
           />
           <SubscriberCard
             onSubscribe={handleSubscribe}
-            clientId={clientId}
+            clientId={userClientId}
+            isReconnecting={isReconnecting}
+            isManuallyDisconnected={isManuallyDisconnected}
           />
           <ReceiverCard
             messages={messages}
-            clientId={clientId}
+            clientId={userClientId}
             onClear={clearMessages}
           />
         </div>

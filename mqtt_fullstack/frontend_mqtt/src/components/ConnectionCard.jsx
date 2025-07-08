@@ -11,8 +11,7 @@ import { showToast } from '../utils/ToastComponent';
 function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
   const [hostname, setHostname] = useState('');
   const [port, setPort] = useState('');
-  // Initialize clientIdInput directly with 'Forthtech'
-  const [clientIdInput, setClientIdInput] = useState('Forthtech');
+  const [clientIdInput, setClientIdInput] = useState("");
   const [clientKey, setClientKey] = useState(null);
   const [clientCert, setClientCert] = useState(null);
   const [caCert, setCaCert] = useState(null);
@@ -25,9 +24,6 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
   const caCertRef = useRef(null);
 
   const toggleAccordion = () => setIsOpen(!isOpen);
-
- 
-
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -42,7 +38,7 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
     if (file) {
       setter(file);
       const base64 = await fileToBase64(file);
-   
+
       const metadata = {
         name: file.name,
         type: file.type,
@@ -64,8 +60,6 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
       return;
     }
 
-    // Client ID is now hardcoded, so this check might be less critical
-    // but good to keep if you ever re-introduce dynamic client ID logic
     if (!clientIdInput) {
       showToast("error", "Client ID is required.");
       return;
@@ -91,10 +85,10 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
 
     setLoading(true);
     try {
-           
-     //  const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
-           const res = await fetch(`https://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {       // for live server
-      
+
+      // const res = await fetch(`http://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {           // for local
+         const res = await fetch(`https://${import.meta.env.VITE_FRONTEND_URL}/upload-certs`, {       // for live server
+
         method: 'POST',
         body: formData,
       });
@@ -105,12 +99,10 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
       } else if (data.error === 'cert_failed') {
         showToast("error", "Certificate authentication failed.");
       } else {
-        // Pass the hardcoded 'Forthtech' client ID to onConnect
-        const hardcodedClientId = 'Forthtech';
-        showToast("success", `Connected to MQTT broker as ${hardcodedClientId}`);
-        setClientId(hardcodedClientId); // Set the client ID in the parent state
-        setClientIdInput(hardcodedClientId); // Update local state if needed (though it's constant)
-        onConnect(hostname, port, hardcodedClientId); // Pass the hardcoded client ID
+        showToast("success", `Connected to MQTT broker as ${clientIdInput}`);
+        setClientId(clientIdInput); // Set the client ID in the parent state
+        setClientIdInput(clientIdInput); // Update local state if needed (though it's constant)
+        onConnect(hostname, port, clientIdInput);
         setIsConnected(true);
       }
     } catch (err) {
@@ -200,8 +192,9 @@ function ConnectionCard({ onConnect, onDisconnect, setClientId }) {
               <input
                 type="text"
                 id="clientId"
-                value={clientIdInput} // This will always be 'Forthtech'
-                readOnly // Make it read-only as it's hardcoded
+                value={clientIdInput}
+                onChange={(e) => setClientIdInput(e.target.value)}
+                placeholder="Enter Client ID"
                 className="shadow border rounded w-full py-2 px-3"
               />
             </div>

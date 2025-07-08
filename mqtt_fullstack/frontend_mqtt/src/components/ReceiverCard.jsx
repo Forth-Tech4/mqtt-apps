@@ -6,29 +6,6 @@ function ReceiverCard({ messages, clientId, onClear }) {
     const date = new Date(timestamp);
     return date.toLocaleTimeString();
   };
-
-  // --- REVISED FILTERING LOGIC IN RECEIVER CARD ---
-  // We want to display:
-  // 1. Any message that is marked as 'local' (meaning, we sent it from this UI)
-  // 2. Any message that is NOT 'local' (meaning, it came from the server) AND is for a subscribed topic.
-  //    (The 'isSubscribed' check happens in useWebSocket's onmessage, so if it reaches here, it implies it was relevant)
-  // The 'local' flag is key here. If you want to hide local messages too when not subscribed,
-  // then the 'local' messages shouldn't be added to the 'messages' array in the first place,
-  // or they also need a subscription check *before* being added in publishCommand.
-
-  // For your current request: "if I didn't subscribe that topic still I can see that message in my receiver box why?"
-  // This implies you want to hide the LOCAL message if the topic isn't subscribed.
-  // This means the `setMessages` call in `publishCommand` needs to check subscription.
-
-  // Let's assume the filtering in useWebSocket.js's onmessage is correct.
-  // If a message reaches `messages` state with `local: false`, it means it came from a subscribed server topic.
-  // If a message reaches `messages` state with `local: true`, it means we just sent it.
-  // If you *only* want to show local messages if the corresponding topic is also subscribed
-  // (which is a bit redundant if the server echoes them, but good for immediate feedback),
-  // then the `publishCommand` itself needs to check.
-
-  // Let's modify `useWebSocket.js` to handle this logic more cleanly.
-  // The `ReceiverCard` will then just display everything it receives from `useWebSocket`.
   const displayableMessages = messages;
 
 
