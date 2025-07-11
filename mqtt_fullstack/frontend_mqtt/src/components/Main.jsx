@@ -63,6 +63,7 @@ const Main = () => {
     clearMessages,
     isReconnecting,
     isManuallyDisconnected,
+    publishRawMessage,
   } = useWebSocket(handleDeviceUpdate, userClientId);
 
   const handleConnect = (host, port, clientIdFromInput) => {
@@ -120,6 +121,26 @@ const Main = () => {
     if (isConnected) {
       handleDeviceUpdate(feature, parsedPayload);
     }
+  };
+
+  const handleRawPublish = async (topic, rawMessage) => {
+    if (isManuallyDisconnected) {
+      showToast("error", "You manually disconnected. Please connect manually first!");
+      return;
+    }
+
+    if (!isConnected) {
+      showToast("info", "Not connected. Attempting to reconnect...");
+      return;
+    }
+
+    if (!topic.trim() || !rawMessage.trim()) {
+      showToast("error", "Topic and message must not be empty!");
+      return;
+    }
+
+    // Send raw message without parsing it
+    await publishRawMessage(topic, rawMessage);
   };
 
   const handleStructuredPublish = async (feature, payload, mac = "") => {
@@ -197,7 +218,7 @@ const Main = () => {
             isManuallyDisconnected={isManuallyDisconnected}
           />
           <PublisherCard
-            onPublish={handlePublish}
+            onPublish={handleRawPublish}
             isConnected={isConnected}
             clientId={userClientId}
             isReconnecting={isReconnecting}

@@ -7,37 +7,36 @@ function PublisherCard({ onPublish, isConnected, clientId }) {
   const [message, setMessage] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const toggleAccordion = () => setIsOpen(!isOpen);
-  const handlePublish = () => {
-    if (!isConnected) {
-      showToast("error", "Please connect first.");
-      return;
-    }
-    if (!clientId) {
-      showToast("error", "Client ID not available. Please connect first.");
-      return;
-    }
-    if (!message.trim()) {
-      showToast("error", "Please enter a message.");
-      return;
-    }
-    const sender = "web";
-    const trimmedSuffix = topicSuffix.trim().replace(/^\/+|\/+$/g, "");
-    const topicMiddle = trimmedSuffix ? `/${trimmedSuffix}` : "";
-    const fullTopic = `${clientId}${topicMiddle}/${sender}`;
-    if (!fullTopic.startsWith(`${clientId}/`)) {
-      showToast(
-        "error",
-        `You can only publish to topics starting with '${clientId}/'`
-      );
-      return;
-    }
-    onPublish(fullTopic, message);
-    const cleanTopic = fullTopic.endsWith("/web")
-      ? fullTopic.slice(0, -4)
-      : fullTopic;
-    showToast("success", `Published to topic: ${cleanTopic}`);
-    setMessage("");
-  };
+ const handlePublish = () => {
+  if (!isConnected) {
+    showToast("error", "Please connect first.");
+    return;
+  }
+
+  if (!clientId) {
+    showToast("error", "Client ID not available. Please connect first.");
+    return;
+  }
+
+  if (!message.trim()) {
+    showToast("error", "Please enter a message.");
+    return;
+  }
+
+  const trimmedSuffix = topicSuffix.trim().replace(/^\/+|\/+$/g, "");
+  const fullTopic = `${clientId}/${trimmedSuffix}`;
+
+  if (!fullTopic.startsWith(`${clientId}/`)) {
+    showToast("error", `You can only publish to topics starting with '${clientId}/'`);
+    return;
+  }
+
+  onPublish(fullTopic, message);
+
+  showToast("success", `Published to topic: ${fullTopic}`);
+  setMessage("");
+};
+
   return (
     <div className="bg-white p-5 rounded-md shadow-md mb-2">
       <div

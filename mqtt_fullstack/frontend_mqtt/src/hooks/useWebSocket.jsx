@@ -9,7 +9,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
   const [clientId, setClientId] = useState('Forthtech');
   const [subscribedTopics, setSubscribedTopics] = useState([]);
   const subscribedTopicsRef = useRef([]);
-  
+
   // Connection state management
   const [connectionCredentials, setConnectionCredentials] = useState(null);
   const [isManuallyDisconnected, setIsManuallyDisconnected] = useState(false);
@@ -64,7 +64,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
       const { host, port, clientIdInput } = connectionCredentials;
       // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);
       const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);
-      
+
       const connectionTimeout = setTimeout(() => {
         socket.close();
         cleanup();
@@ -79,23 +79,23 @@ function useWebSocket(onDeviceUpdate, userClientId) {
 
       socket.onopen = () => {
         console.log('✅ WebSocket Reconnected Successfully');
-        
+
         // Update refs immediately for synchronous access
         wsRef.current = socket;
         isConnectedRef.current = true;
-        
+
         // Update state
         setWs(socket);
         setIsConnected(true);
         setClientId(clientIdInput);
-        
+
         // Auto-subscribe to default topic
         const defaultTopic = `${clientIdInput}/#`;
         const subscribeMsg = { action: 'subscribe', topic: defaultTopic };
         console.log('⬆️ Auto-subscribing to default topic:', subscribeMsg);
         socket.send(JSON.stringify(subscribeMsg));
         setSubscribedTopics([defaultTopic]);
-        
+
         showToast('success', 'Reconnected and auto-subscribed to default topic');
         cleanup();
         resolve(socket);
@@ -105,7 +105,13 @@ function useWebSocket(onDeviceUpdate, userClientId) {
         console.log('⬅️ RECEIVED raw data from server:', event.data);
         try {
           const { topic, message } = JSON.parse(event.data);
-          let parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+          let parsedMessage;
+          try {
+            parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+          } catch {
+            parsedMessage = message; // fallback to raw string if JSON parsing fails
+          }
+
           const featureFromMessage = parsedMessage?.feature;
 
           console.log('🧠 Parsed incoming message:', {
@@ -166,7 +172,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
         setSubscribedTopics([]);
         subscribedTopicsRef.current = [];
         clearAutoDisconnectTimer();
-        
+
         if (!isManuallyDisconnected) {
           showToast('info', 'Connection lost. Will retry on next action.');
         }
@@ -227,7 +233,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
       }
 
       showToast('success', `Published to ${topic}`);
-      
+
     } catch (err) {
       console.error('❌ Failed to stringify or send message:', err);
       showToast('error', 'Message must be a valid JSON string.');
@@ -239,7 +245,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
     setConnectionCredentials({ host, port, clientIdInput });
     setIsManuallyDisconnected(false);
     setClientId(clientIdInput);
-    
+
     // const socket = new WebSocket(`ws://${import.meta.env.VITE_FRONTEND_URL}`);
     const socket = new WebSocket(`wss://${import.meta.env.VITE_FRONTEND_URL}`);
 
@@ -255,7 +261,13 @@ function useWebSocket(onDeviceUpdate, userClientId) {
       console.log('⬅️ RECEIVED raw data from server:', event.data);
       try {
         const { topic, message } = JSON.parse(event.data);
-        let parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+        let parsedMessage;
+        try {
+          parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+        } catch {
+          parsedMessage = message; // fallback to raw string if JSON parsing fails
+        }
+
         const featureFromMessage = parsedMessage?.feature;
 
         console.log('🧠 Parsed incoming message:', {
@@ -315,7 +327,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
       setSubscribedTopics([]);
       subscribedTopicsRef.current = [];
       clearAutoDisconnectTimer();
-      
+
       if (!isManuallyDisconnected) {
         showToast('info', 'Connection lost. Will auto-reconnect on next action.');
       }
@@ -383,7 +395,13 @@ function useWebSocket(onDeviceUpdate, userClientId) {
     }
 
     const MAC_ADDRESS = localStorage.getItem('activeMac');
-    let topic = feature.endsWith('web') ? `${clientId}/${feature.slice(0, -3).replace(/\/+$/, '')}` : MAC_ADDRESS ? `${clientId}/${MAC_ADDRESS}` : `${clientId}`;
+    let topic;
+    if (MAC_ADDRESS) {
+      topic = `${clientId}/${MAC_ADDRESS}`;
+    } else {
+      topic = `${clientId}`;
+    }
+
 
     const message = { feature, ...commandPayload };
     const msgToSend = { action: 'publish', topic, message: JSON.stringify(message) };
@@ -393,7 +411,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
       feature,
       payload: message
     });
-    
+
     wsRef.current.send(JSON.stringify(msgToSend));
     showToast('success', `Command sent to ${feature}: ${JSON.stringify(commandPayload)}`);
 
@@ -401,6 +419,26 @@ function useWebSocket(onDeviceUpdate, userClientId) {
       setMessages(prev => [...prev, { topic, message, timestamp: Date.now(), local: true }]);
     }
   };
+
+  const publishRawMessage = (topic, messageString) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn("❌ WebSocket not connected. Cannot send message.");
+      showToast('error', 'WebSocket not connected. Cannot publish.');
+      return;
+    }
+
+    wsRef.current.send(JSON.stringify({
+      action: "publish",
+      topic,
+      message: messageString, // ✅ Still raw string
+    }));
+
+    console.log('⬆️ SENT to server (Raw Publish):', { topic, message: messageString });
+    showToast('success', `Raw message published to ${topic}`);
+  };
+
+
+
 
   const disconnectWebSocket = () => {
     console.log('👋 Disconnecting WebSocket manually.');
@@ -435,6 +473,7 @@ function useWebSocket(onDeviceUpdate, userClientId) {
     connectWebSocket,
     subscribeTopic,
     publishCommand,
+    publishRawMessage,
     publishToTopic,
     disconnectWebSocket,
     clearMessages,
